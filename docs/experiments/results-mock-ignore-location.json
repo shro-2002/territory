@@ -1,0 +1,292 @@
+{
+  "mode": "mock-ignore-location",
+  "warning": "Live Qloo hackathon API. Aggregates only; raw responses are private.",
+  "started": "2026-10-22T21:32:34.607Z",
+  "finished": "2026-10-22T21:32:34.647Z",
+  "results": [
+    {
+      "id": "E1",
+      "hypothesis": "≥80% of real indie/non-English film & TV comps resolve to a Qloo entity via /search.",
+      "requests": [
+        "GET /search?query=<title>&types=urn:entity:movie,urn:entity:tv_show&take=8"
+      ],
+      "observed": {
+        "coverageOfRealTitles": 0.842,
+        "resolved": 16,
+        "ambiguous": 0,
+        "unresolved": 4,
+        "perTitle": [
+          {
+            "title": "Past Lives",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Minari",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Aftersun",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Parasite",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Drive My Car",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Portrait of a Lady on Fire",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Roma",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "The Worst Person in the World",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Shoplifters",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Burning",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "The Lunchbox",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Wadjda",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "A Separation",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Toni Erdmann",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Cold War",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Squid Game",
+            "status": "unresolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Dark",
+            "status": "unresolved",
+            "alternatives": 2
+          },
+          {
+            "title": "Fleabag",
+            "status": "unresolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Oldboy",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Totally Fake Film 31337",
+            "status": "unresolved",
+            "alternatives": 0
+          }
+        ]
+      },
+      "verdict": "pass",
+      "notes": "The fake title must be unresolved; any match for it is a false positive."
+    },
+    {
+      "id": "E2",
+      "hypothesis": "signal.location.query at country level changes affinity ordering for a fixed set of films (it is not ignored).",
+      "requests": [
+        "GET /v2/insights?filter.type=urn:entity:movie&signal.location.query=<country>&filter.results.entities=<ids>&take=50",
+        "same without signal.location.query (baseline)"
+      ],
+      "observed": {
+        "marketsQueried": 8,
+        "marketsAccepted": 8,
+        "errors": {},
+        "localityEcho": {
+          "US": "returned",
+          "FR": "returned",
+          "DE": "returned",
+          "BR": "returned",
+          "JP": "returned",
+          "KR": "returned",
+          "IN": "returned",
+          "MX": "returned"
+        },
+        "entitiesCompared": 19,
+        "meanPairwiseSpearman": 1,
+        "meanSpearmanVsNoLocation": 1
+      },
+      "verdict": "fail",
+      "notes": "Docs' entity-type guide does not list signal.location for movie; the location use-case example does. Spearman ≈ 1 everywhere means location is ignored."
+    },
+    {
+      "id": "E3",
+      "hypothesis": "Anchor-calibrated percentiles give a cross-market signal that varies between markets and is robust to dropping any one reference title.",
+      "requests": [
+        "E2 market queries reused (comps + reference panel in one call per market)"
+      ],
+      "observed": {
+        "perMarket": {
+          "US": {
+            "score": 0.458,
+            "anchorsFound": 16,
+            "compsFound": 3,
+            "leaveOneOutSpread": 0.067
+          },
+          "FR": {
+            "score": 0.458,
+            "anchorsFound": 16,
+            "compsFound": 3,
+            "leaveOneOutSpread": 0.067
+          },
+          "DE": {
+            "score": 0.458,
+            "anchorsFound": 16,
+            "compsFound": 3,
+            "leaveOneOutSpread": 0.067
+          },
+          "BR": {
+            "score": 0.458,
+            "anchorsFound": 16,
+            "compsFound": 3,
+            "leaveOneOutSpread": 0.067
+          },
+          "JP": {
+            "score": 0.458,
+            "anchorsFound": 16,
+            "compsFound": 3,
+            "leaveOneOutSpread": 0.067
+          },
+          "KR": {
+            "score": 0.458,
+            "anchorsFound": 16,
+            "compsFound": 3,
+            "leaveOneOutSpread": 0.067
+          },
+          "IN": {
+            "score": 0.458,
+            "anchorsFound": 16,
+            "compsFound": 3,
+            "leaveOneOutSpread": 0.067
+          },
+          "MX": {
+            "score": 0.458,
+            "anchorsFound": 16,
+            "compsFound": 3,
+            "leaveOneOutSpread": 0.067
+          }
+        },
+        "maxAffinityPerQuery": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "perQueryMaxIsOne": true,
+        "scoreRangeAcrossMarkets": 0,
+        "meanLeaveOneOutSpread": 0.067
+      },
+      "verdict": "fail",
+      "notes": "If per-query max is always 1, raw affinities are normalized per query and must not be compared across markets directly."
+    },
+    {
+      "id": "E4",
+      "hypothesis": "An unreleased film can be researched from comps alone: ≥2 comps resolve and Qloo returns related titles for the comp set.",
+      "requests": [
+        "GET /search per comp",
+        "GET /v2/insights?filter.type=urn:entity:movie&signal.interests.entities=<comp ids>&take=10"
+      ],
+      "observed": {
+        "immigrant family drama": {
+          "compsResolved": 2,
+          "compsRequested": 3,
+          "relatedTitlesReturned": 10
+        },
+        "nordic relationship dramedy": {
+          "compsResolved": 2,
+          "compsRequested": 3,
+          "relatedTitlesReturned": 10
+        },
+        "class-satire thriller": {
+          "compsResolved": 2,
+          "compsRequested": 3,
+          "relatedTitlesReturned": 10
+        }
+      },
+      "verdict": "pass",
+      "notes": "Related titles are the substitute-comp pool used by the agent's thin-evidence fallback."
+    },
+    {
+      "id": "E5",
+      "hypothesis": "API errors are documented and distinguishable; p95 latency allows a ~10-market run under 30 s at concurrency 4.",
+      "requests": [
+        "error-contract probes listed in observed.probes",
+        "all calls made by E1–E5"
+      ],
+      "observed": {
+        "probes": {
+          "unsupported type → expect 403": "Qloo /v2/insights returned 403: {\"error\":\"Unsupported entity type\"}",
+          "unknown locality → expect 400": "Qloo /v2/insights returned 400: {\"error\":\"No locality found for 'atlantis undersea republic'\"}",
+          "type only, no signal → documented error": "Qloo /v2/insights returned 400: {\"error\":\"at least one valid signal or filter is required\"}",
+          "free-text tag → documented error/empty": "ok (20 entities)",
+          "heatmap for comps in a country": "ok (20 entities)"
+        },
+        "totalNetworkCalls": 62,
+        "statuses": {
+          "200": 59,
+          "400": 2,
+          "403": 1
+        },
+        "latencyP50Ms": 0,
+        "latencyP95Ms": 1,
+        "cacheHits": 33
+      },
+      "verdict": "pass",
+      "notes": ""
+    },
+    {
+      "id": "E6",
+      "hypothesis": "Qloo-grounded plans differ materially from LLM-only plans for identical inputs and contain fewer unsupported claims.",
+      "requests": [
+        "LLM-only baseline with identical inputs (see docs/EVALUATION.md protocol)"
+      ],
+      "observed": {},
+      "verdict": "not_run",
+      "notes": "Requires the LLM baseline harness (Phase D). Not run; no result is claimed."
+    }
+  ]
+}
