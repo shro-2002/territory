@@ -5,7 +5,7 @@ import { z } from "zod";
 import { LIMITS, replan, runAgent, Session, TraceEvent } from "@/lib/agent/agent";
 import { createQlooClient } from "@/lib/qloo/factory";
 import type { CallRecord } from "@/lib/qloo/types";
-import { checkRateLimit, clientIp, qlooBudgetRemaining, recordQlooCalls } from "@/lib/server/rate-limit";
+import { checkRateLimitShared, clientIp, qlooBudgetRemainingShared, recordQlooCallsShared } from "@/lib/server/rate-limit";
 import { seal, verifySeal } from "@/lib/server/seal";
 import { ConstraintsSchema } from "@/lib/territory/planner";
 
@@ -28,9 +28,9 @@ function json(status: number, code: string, message: string, headers: Record<str
 }
 
 export async function POST(req: Request) {
-  const limited = checkRateLimit(clientIp(req));
+  const limited = await checkRateLimitShared(clientIp(req));
   if (!limited.ok) return json(429, "RATE_LIMITED", "Too many runs from this address. Try again shortly.", { "retry-after": String(limited.retryAfterSec) });
-  if (qlooBudgetRemaining() < LIMITS.maxQlooCalls) return json(503, "QUOTA_GUARD", "Live research is paused to protect the shared Qloo quota. Explore the cached showcase.");
+  if ((await qlooBudgetRemainingShared()) < LIMITS.maxQlooCalls) return json(503, "QUOTA_GUARD", "Live research is paused to protect the shared Qloo quota. Explore the cached showcase.");
 
   const raw = await req.text();
   if (raw.length > MAX_BODY_BYTES) return json(413, "TOO_LARGE", "Request body too large.");
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         const message = err instanceof Error ? err.message : "Unexpected error";
         send({ type: "error", code: message.startsWith("Invalid input") || message.startsWith("Unsupported") ? "INVALID_INPUT" : "AGENT_ERROR", message: message.slice(0, 400) });
       } finally {
-        recordQlooCalls(client.liveCallCount);
+        await recordQlooCallsShared(client.liveCallCount);
         controller.close();
       }
     },

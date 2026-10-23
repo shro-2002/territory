@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { Cache, QlooClient, QlooClientOptions } from "./client";
+import { hasRedis, redis } from "../server/redis";
 import { createMockFetch, MockOptions } from "./mock";
 
 /** Private on-disk cache. Lives in .private/ which is gitignored: Qloo data must never be committed. */
@@ -36,6 +37,17 @@ export class LayeredCache implements Cache {
   }
 }
 
+/** Shared private cache in Upstash Redis; survives cold starts and is shared across instances. */
+export class RedisCache implements Cache {
+  async get(key: string) {
+    const raw = await redis(["GET", `qloo:${key}`]);
+    return typeof raw === "string" ? JSON.parse(raw) : undefined;
+  }
+  async set(key: string, value: unknown) {
+    await redis(["SET", `qloo:${key}`, JSON.stringify(value)]);
+  }
+}
+
 export const PRIVATE_DIR = path.join(process.cwd(), ".private");
 const SEED_CACHE_DIR = path.join(PRIVATE_DIR, "qloo-cache");
 
@@ -43,7 +55,10 @@ const SEED_CACHE_DIR = path.join(PRIVATE_DIR, "qloo-cache");
 // private, read-only seed of the cache (uploaded by `vercel deploy`, never committed to git).
 function liveCache(): Cache {
   if (!process.env.VERCEL) return new FileCache(SEED_CACHE_DIR);
-  return new LayeredCache([new FileCache(path.join(os.tmpdir(), "territory-qloo-cache")), new FileCache(SEED_CACHE_DIR)]);
+  const tmp = new FileCache(path.join(os.tmpdir(), "territory-qloo-cache"));
+  const seed = new FileCache(SEED_CACHE_DIR);
+  // Redis first so new research is shared; tmp and seed still answer when Redis is absent or down.
+  return hasRedis() ? new LayeredCache([new RedisCache(), tmp, seed]) : new LayeredCache([tmp, seed]);
 }
 
 export function hasLiveKey(): boolean {
