@@ -1,0 +1,6 @@
+# Vercel CLI uploads respect this file; .private is uploaded on purpose (private cache seed).
+node_modules
+.next
+.env*
+!.env.example
+.private/*.json

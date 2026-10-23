@@ -25,3 +25,19 @@ Client call budget (default 120, agent/showcase 160; a cold 9-market run uses ~1
 
 ## Security
 Key only in server env; never in URL, logs, CallRecord or client bundle. `.private/` and `.env*` gitignored.
+
+## Web app (Phase C)
+
+```
+src/app/page.tsx              server: loads aggregate experiment JSON ("use cache"), renders TerritoryApp
+src/app/api/agent/route.ts    POST {action:"run",input} | {action:"replan",session,token,patch} -> NDJSON stream
+                              messages: trace (incl. per-market progress) · result (session, HMAC token, calls) · error
+src/components/               TerritoryApp (container) · Atlas (d3-geo + world-atlas) · TracePanel · MarketPanel
+                              WarRoom (plan, controls, revision compare) · EvidenceLab · BriefForm · ProvenanceTag
+src/lib/server/               seal.ts (HMAC over the session) · rate-limit.ts (per-IP + per-instance Qloo cap)
+src/lib/client/               stream.ts (NDJSON reader) · brief.ts (Markdown export)
+```
+Stateless by design: the session travels with the browser, sealed so the server only replans evidence it produced.
+Cache: `.private/qloo-cache` locally, `os.tmpdir()` on Vercel (per instance, not shared).
+Limits (best effort, per instance): 12 runs / 10 min / IP, 3,000 Qloo calls / day, 160 calls / run.
+Dependencies: production `npm audit` clean; 5 high advisories are in the dev-only lint chain (eslint-config-next → braces).

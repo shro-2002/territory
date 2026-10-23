@@ -109,7 +109,7 @@ export class QlooClient {
       throw new QlooError(`Qloo call budget of ${this.opts.callBudget} exhausted`, "BUDGET_EXCEEDED");
     }
     this.liveCalls += 1;
-    const body = await this.withSlot(() => this.fetchWithRetry(path, params, qs));
+    const body = slimBody(await this.withSlot(() => this.fetchWithRetry(path, params, qs)));
     await this.opts.cache.set(cacheKey, body);
     return body;
   }
@@ -172,6 +172,31 @@ export class QlooClient {
 
 function backoff(attempt: number) {
   return BACKOFF_BASE_MS * 2 ** (attempt - 1) + Math.floor(Math.random() * BACKOFF_BASE_MS);
+}
+
+/**
+ * Keep only the fields Territory reads. Data minimisation: smaller private cache, and no Qloo
+ * attributes are retained beyond what the product uses.
+ */
+export function slimBody(body: unknown): unknown {
+  const slimEntity = (e: Record<string, unknown>) => {
+    const props = e.properties as Record<string, unknown> | null | undefined;
+    const query = e.query as Record<string, unknown> | null | undefined;
+    return {
+      entity_id: e.entity_id,
+      name: e.name,
+      ...(e.types ? { types: e.types } : {}),
+      ...(e.subtype ? { subtype: e.subtype } : {}),
+      ...(typeof e.popularity === "number" ? { popularity: e.popularity } : {}),
+      ...(props?.release_year !== undefined ? { properties: { release_year: props.release_year } } : {}),
+      ...(typeof query?.affinity === "number" ? { query: { affinity: query.affinity } } : {}),
+    };
+  };
+  const b = body as { results?: unknown; query?: unknown; success?: unknown };
+  if (Array.isArray(b?.results)) return { results: (b.results as Record<string, unknown>[]).map(slimEntity) };
+  const r = b?.results as { entities?: Record<string, unknown>[] } | undefined;
+  if (r?.entities) return { success: b.success, results: { entities: r.entities.map(slimEntity) }, ...(b.query ? { query: { localities: (b.query as Record<string, unknown>).localities ? true : undefined } } : {}) };
+  return body;
 }
 
 function countResults(body: unknown): number {
