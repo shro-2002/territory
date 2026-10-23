@@ -18,15 +18,23 @@ Status: **prepared, not deployed.** Publishing needs explicit approval and your 
 Estimated judging load (assumption, not measured): ~0.5 MB per visit → 1,000 visits ≈ 0.5 GB ≈ 10 credits + ~6 credits requests;
 a live 40 s run at 1 GB ≈ 0.11 credits.
 
-## Netlify steps (after approval)
-1. `npx netlify-cli login` (you, in your own terminal), then `npx netlify-cli init` in `territory/` (new site, no Git CI needed).
-2. Runtime env vars (`npx netlify-cli env:set …` or UI; stored encrypted by Netlify, never in git):
-   `QLOO_API_KEY`, `SESSION_SECRET` (`openssl rand -hex 32`), `TERRITORY_HOSTED=1`.
-   Optional for **live custom research**: Upstash Redis free (500K commands/month, 250 MB) → `UPSTASH_REDIS_REST_URL`,
-   `UPSTASH_REDIS_REST_TOKEN`. Without it the hosted site is **cache-only** (showcase + War Room work; uncached briefs show a notice).
-3. `npx netlify-cli deploy --build --prod` from this machine. The local build includes the private `.private/qloo-cache/`
-   seed in the server function (`netlify.toml` `included_files`, `next.config.ts` tracing). It is not in the publish directory or git.
-4. External browser test (see `docs/JUDGE_DEMO.md` checklist); record latency; probe `/.private/...` → must be 404.
+## Netlify steps (as actually done, 2026-10-23)
+1. Project `territory-qloo` created via the Netlify MCP; CLI linked (`netlify link --id …`).
+2. Secrets entered by the owner in the dashboard (Project configuration → Environment variables, "Contains secret
+   values", scopes Builds/Functions/Runtime): `QLOO_API_KEY`, `SESSION_SECRET`, `UPSTASH_REDIS_REST_URL`,
+   `UPSTASH_REDIS_REST_TOKEN`. (CLI `env:set` and the env API returned success/403 without storing on this account.)
+   `TERRITORY_HOSTED` is optional: the Netlify/Lambda runtime is detected.
+3. Deploy with `scripts/deploy-draft.sh` (draft) or `scripts/deploy-draft.sh --prod` (production, approval required).
+   It builds from a clean staging copy with **no `.env` files** — Netlify's Next.js runtime otherwise copies `.env.local`
+   into the server function — keeps the private seed in the function, and aborts if an env file reaches the bundle.
+
+## Measured on the draft deploy (2026-10-23)
+Page 200 in 1.1–1.4 s (182 KB HTML). Showcase 1.4–1.9 s (0 live, 120 cached). Germany removal 0.9 s. Budget cut 0.6 s
+(Germany stays excluded). 3 concurrent users 1.0–4.6 s. New 3-comp film 4.4 s (14 live calls). Cold 12-market brief with
+new comps 11.8 s (44 live), well under the 60 s limit. Upstash counter rose by exactly the live calls; shared cache grew.
+Browser journey (showcase → Germany → cut → export): 5.7 s, 0 page errors. Tampered session 400; `/.private/…`,
+`/qloo-cache/…`, `/.env.local`, function paths 404. Not tested on the host: Redis outage (unit-tested), deadline cutoff
+(unit-tested), Netlify usage/credit numbers.
 
 ## Data protection & integrity (audited)
 - Key: server env only; absent from every response and client bundle (tested).
