@@ -85,6 +85,11 @@ export class QlooClient {
     return this.liveCalls;
   }
 
+  /** Requests that count against the real Qloo quota. A mock backend makes none, however many calls it serves. */
+  get meteredCallCount() {
+    return this.source === "live" ? this.liveCalls : 0;
+  }
+
   async search(query: string, types?: string[], take = 5): Promise<Entity[]> {
     const raw = await this.get("/search", { query, types: types?.join(","), take });
     const parsed = SearchResponseSchema.safeParse(raw);

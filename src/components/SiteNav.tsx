@@ -8,7 +8,7 @@ const LINKS = [
   { href: "#evidence", label: "Evidence" },
 ] as const;
 
-type Props = { source: "live" | "mock"; hasResult: boolean; onExport: () => void };
+type Props = { source: "live" | "mock" | null; hasResult: boolean; onExport: () => void };
 
 export function SiteNav({ source, hasResult, onExport }: Props) {
   return (
@@ -23,9 +23,9 @@ export function SiteNav({ source, hasResult, onExport }: Props) {
           </nav>
         )}
         <div className="flex items-center gap-3">
-          <span className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-wider sm:inline-flex ${source === "live" ? "border-evidence/40 text-evidence" : "border-caution/50 text-caution"}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${source === "live" ? "bg-evidence pulse" : "bg-caution"}`} />
-            {source === "live" ? "Live Qloo API" : "Mock data — not Qloo evidence"}
+          <span className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-wider sm:inline-flex ${source === "live" ? "border-evidence/40 text-evidence" : source === "mock" ? "border-caution/50 text-caution" : "border-line text-bone-faint"}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${source === "live" ? "bg-evidence pulse" : source === "mock" ? "bg-caution" : "bg-bone-faint"}`} />
+            {source === "live" ? "Live Qloo API" : source === "mock" ? "Mock data — not Qloo evidence" : "Checking data source"}
           </span>
           {hasResult && <button type="button" className="btn" onClick={onExport}>Export briefing</button>}
         </div>

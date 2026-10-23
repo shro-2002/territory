@@ -27,8 +27,9 @@ export function clientIp(req: Request): string {
 }
 
 /** Global variants: use Redis counters when available, otherwise the in-memory versions above. */
-export async function checkRateLimitShared(ip: string): Promise<{ ok: true } | { ok: false; retryAfterSec: number }> {
-  if (!hasRedis()) return checkRateLimit(ip);
+export async function checkRateLimitShared(ip: string, source: "live" | "mock" = "live"): Promise<{ ok: true } | { ok: false; retryAfterSec: number }> {
+  // Mock runs are private to this process: they never read or write shared counters.
+  if (source === "mock" || !hasRedis()) return checkRateLimit(ip);
   const bucket = Math.floor(Date.now() / WINDOW_MS);
   const key = `rl:${bucket}:${ip}`;
   const count = Number(await redis(["INCR", key]));
@@ -54,7 +55,9 @@ export interface QlooReservation {
  * Fails closed: on a hosted deployment without a reachable shared store, no live calls are granted
  * (cached evidence still works). Locally, an in-memory pool is used.
  */
-export async function reserveQlooCalls(wanted: number): Promise<QlooReservation> {
+export async function reserveQlooCalls(wanted: number, source: "live" | "mock" = "live"): Promise<QlooReservation> {
+  // A mock backend makes no Qloo requests, so there is nothing to reserve, meter or release.
+  if (source === "mock") return { granted: wanted, release: async () => {} };
   if (!hasRedis()) {
     if (isHosted()) return { granted: 0, reason: "shared quota store not configured", release: async () => {} };
     const today = new Date().toISOString().slice(0, 10);

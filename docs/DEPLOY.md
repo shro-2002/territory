@@ -48,3 +48,11 @@ Browser journey (showcase → Germany → cut → export): 5.7 s, 0 page errors.
 Before each run the server **reserves** up to 220 live Qloo calls with an atomic Redis `INCRBY` against a 5,000/day cap and
 returns unused calls afterwards. Redis unreachable, or hosted without Redis → **0 live calls granted**; cached evidence still
 serves. Locally (not hosted) an in-memory pool is used. Per-IP rate limit: 12 runs / 10 min.
+
+**Isolation (incident 2026-10-23).** Mock-backend test runs reserved against, and were never refunded from, the
+production counter: the route reserved before knowing the source, and the mock client's calls were released as if they
+were live. Now: (1) the mock source never reserves, meters or touches shared counters; (2) Redis credentials are honoured
+only on a hosted deployment, or when `TERRITORY_REDIS_NAMESPACE` names an isolated keyspace (every key is prefixed with
+it); `next dev`, local `next start`, Playwright, CI and vitest otherwise fall back to in-memory limits and log one warning;
+(3) `TERRITORY_TEST=1` blocks the production keyspace even if hosting looks detected; (4) the header badge reads
+`/api/status` at runtime and each run's own call sources, not the build environment. The counter key rolls at 00:00 UTC.

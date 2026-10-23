@@ -13,7 +13,7 @@ export interface HeroProgress {
 
 type Props = {
   input: AgentInput;
-  source: "live" | "mock";
+  source: "live" | "mock" | null;
   isBusy: boolean;
   hasResult: boolean;
   progress: HeroProgress;
@@ -73,7 +73,7 @@ export function Hero({ input, source, isBusy, hasResult, progress, pendingCodes,
               </p>
             ) : !hasResult ? (
               <p className="text-bone-faint">
-                {source === "live" ? "Answers the showcase film in about two seconds from cached live Qloo responses." : "Running on labelled mock data — no Qloo evidence."}
+                {source === "live" ? "Answers the showcase film in about two seconds from cached live Qloo responses." : source === "mock" ? "Running on labelled mock data — no Qloo evidence." : "\u00a0"}
               </p>
             ) : null}
           </div>

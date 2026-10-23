@@ -24,8 +24,10 @@ describe("Upstash-backed shared state", () => {
   beforeEach(() => {
     process.env.UPSTASH_REDIS_REST_URL = "https://fake.upstash.test";
     process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
+    process.env.TERRITORY_REDIS_NAMESPACE = "unit-test"; // isolation is mandatory outside a hosted deployment
   });
   afterEach(() => {
+    delete process.env.TERRITORY_REDIS_NAMESPACE;
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
     vi.unstubAllGlobals();

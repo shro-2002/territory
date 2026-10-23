@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { AgentInput, Session, TraceEvent } from "@/lib/agent/agent";
 import { briefMarkdown } from "@/lib/client/brief";
+import { useDataSource } from "@/lib/client/data-source";
 import { streamAgent } from "@/lib/client/stream";
 import type { CallRecord } from "@/lib/qloo/types";
 import { marketByCode } from "@/lib/territory/markets";
@@ -19,9 +20,9 @@ import { BudgetSection } from "./BudgetSection";
 import { WarRoom } from "./WarRoom";
 
 type Version = { session: Session; token: string; context: string | null; label: string };
-type Props = { initialInput: AgentInput; summary: ExperimentSummary; source: "live" | "mock" };
+type Props = { initialInput: AgentInput; summary: ExperimentSummary };
 
-export function TerritoryApp({ initialInput, summary, source }: Props) {
+export function TerritoryApp({ initialInput, summary }: Props) {
   const [input, setInput] = useState(initialInput);
   const [isEditing, setIsEditing] = useState(false);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -35,6 +36,8 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
 
+  // Runtime truth: what the server says it uses now, corrected by what the last run's Qloo calls reported.
+  const source = useDataSource(calls.at(-1)?.source ?? null);
   const current = versions.at(-1) ?? null;
   const session = current?.session ?? null;
   // The research context stays server-side (encrypted); its presence means the plan can be revised.
@@ -98,7 +101,7 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
   };
   const exportBrief = () => {
     if (!session) return;
-    const blob = new Blob([briefMarkdown(session, source)], { type: "text/markdown" });
+    const blob = new Blob([briefMarkdown(session, source === "live" ? "live" : "mock")], { type: "text/markdown" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `territory-${session.input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-v${session.version}.md`;

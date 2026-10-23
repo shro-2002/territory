@@ -13,6 +13,6 @@ export default defineConfig({
     port: PORT,
     reuseExistingServer: false,
     timeout: 240_000,
-    env: { QLOO_API_KEY: "", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "" },
+    env: { QLOO_API_KEY: "", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", TERRITORY_TEST: "1" },
   },
 });

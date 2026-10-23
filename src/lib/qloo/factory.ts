@@ -70,10 +70,15 @@ export function hasLiveKey(): boolean {
   return Boolean(process.env.QLOO_API_KEY?.trim());
 }
 
+/** What a request made right now would talk to. The single source of truth for quota, rate-limit and badge decisions. */
+export function qlooSource(): "live" | "mock" {
+  return hasLiveKey() ? "live" : "mock";
+}
+
 /** Live client when QLOO_API_KEY is set, otherwise a clearly labelled mock. */
 export function createQlooClient(overrides: QlooClientOptions & { mock?: MockOptions; forceMock?: boolean } = {}): QlooClient {
   const { mock, forceMock, ...opts } = overrides;
-  if (!forceMock && hasLiveKey()) {
+  if (!forceMock && qlooSource() === "live") {
     return new QlooClient({ cache: liveCache(), ...opts, apiKey: process.env.QLOO_API_KEY!.trim(), source: "live" });
   }
   return new QlooClient({ ...opts, apiKey: "mock", fetchImpl: createMockFetch(mock), source: "mock", sleep: async () => {} });

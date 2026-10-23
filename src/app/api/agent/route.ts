@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { LIMITS, replan, runAgent, Session, TraceEvent } from "@/lib/agent/agent";
 import type { ResearchContext } from "@/lib/agent/research";
-import { createQlooClient } from "@/lib/qloo/factory";
+import { createQlooClient, qlooSource } from "@/lib/qloo/factory";
 import type { CallRecord } from "@/lib/qloo/types";
 import { researchDeadlineMs } from "@/lib/server/hosting";
 import { checkRateLimitShared, clientIp, reserveQlooCalls } from "@/lib/server/rate-limit";
@@ -41,7 +41,8 @@ function json(status: number, code: string, message: string, headers: Record<str
 }
 
 export async function POST(req: Request) {
-  const limited = await checkRateLimitShared(clientIp(req));
+  const source = qlooSource();
+  const limited = await checkRateLimitShared(clientIp(req), source);
   if (!limited.ok) return json(429, "RATE_LIMITED", "Too many runs from this address. Try again shortly.", { "retry-after": String(limited.retryAfterSec) });
 
   const raw = await req.text();
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
     throw err;
   }
 
-  const reservation = await reserveQlooCalls(LIMITS.maxQlooCalls);
+  const reservation = await reserveQlooCalls(LIMITS.maxQlooCalls, source);
   const client = createQlooClient({ callBudget: reservation.granted, callIdPrefix: `${randomBytes(3).toString("hex")}-`, deadlineAt: Date.now() + researchDeadlineMs() });
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
         const code = err instanceof SealConfigError ? "CONFIG" : message.startsWith("Invalid input") || message.startsWith("Unsupported") ? "INVALID_INPUT" : "AGENT_ERROR";
         send({ type: "error", code, message: code === "CONFIG" ? "Server is missing its session secret." : message.slice(0, 400) });
       } finally {
-        await reservation.release(client.liveCallCount);
+        await reservation.release(client.meteredCallCount);
         controller.close();
       }
     },

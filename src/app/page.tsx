@@ -3,7 +3,6 @@ import path from "node:path";
 
 import { TerritoryApp } from "@/components/TerritoryApp";
 import type { E6Summary, ExperimentSummary } from "@/components/EvidenceLab";
-import { hasLiveKey } from "@/lib/qloo/factory";
 import { SHOWCASE_INPUT } from "@/lib/territory/scenarios";
 
 async function readJson<T>(file: string): Promise<T | null> {
@@ -51,7 +50,7 @@ function summarizeE6(raw: E6Raw | null): E6Summary | null {
   };
 }
 
-async function loadPageData(): Promise<{ summary: ExperimentSummary; source: "live" | "mock" }> {
+async function loadPageData(): Promise<{ summary: ExperimentSummary }> {
   "use cache";
   const [experiments, e6, yearWindow] = await Promise.all([
     readJson<{ results: Array<{ id: string; verdict: string; hypothesis: string }> }>("results-live.json"),
@@ -64,10 +63,10 @@ async function loadPageData(): Promise<{ summary: ExperimentSummary; source: "li
     e6: summarizeE6(e6),
     yearWindow: yearWindow?.results ?? null,
   };
-  return { summary, source: hasLiveKey() ? "live" : "mock" };
+  return { summary };
 }
 
 export default async function Page() {
-  const { summary, source } = await loadPageData();
-  return <TerritoryApp initialInput={SHOWCASE_INPUT} summary={summary} source={source} />;
+  const { summary } = await loadPageData();
+  return <TerritoryApp initialInput={SHOWCASE_INPUT} summary={summary} />;
 }
