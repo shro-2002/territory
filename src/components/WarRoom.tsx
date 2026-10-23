@@ -27,6 +27,9 @@ export function WarRoom({ history, isBusy, isReplanning, progressLine, onReplan 
   const remove = (code: string) => onReplan({ excludedMarkets: [...c.excludedMarkets, code] }, `${marketByCode(code).name}’s distributor pulls out`);
   const shock = session.plan.markets.find((m) => m.code === PREFERRED_SHOCK) ?? session.plan.markets.find((m) => m.mode !== "original") ?? session.plan.markets[0];
   const cutBudget = Math.round(c.budgetUsd * BUDGET_CUT);
+  const activeLabel = history.length > 1 ? history.at(-1)!.label : null;
+  const shockTitle = shock ? `${shock.name}’s distributor pulls out` : "";
+  const budgetTitle = "Localization budget cut by 40%";
   const budget = Number(budgetDraft);
   const isBudgetValid = Number.isFinite(budget) && budget >= 0 && budget !== c.budgetUsd;
 
@@ -36,22 +39,25 @@ export function WarRoom({ history, isBusy, isReplanning, progressLine, onReplan 
         Real releases fall apart. Pick a disruption and Territory works out which decisions are invalidated, keeps the evidence that still holds, researches only what is missing, then re-optimises and re-checks.
       </SectionHead>
 
+      <p className="eyebrow mb-3">{history.length > 1 ? `Available next, applied to the strategy shown (v${session.version})` : "Available disruptions"}</p>
       <div className="grid gap-4 md:grid-cols-2">
         {shock && (
           <Scenario
-            tag="Disruption"
-            title={`${shock.name}’s distributor pulls out`}
+            title={shockTitle}
             detail={`Remove ${shock.name} from the plan and find the best replacement.`}
+            isActive={activeLabel === shockTitle}
+            version={session.version}
             disabled={isBusy}
             onRun={() => remove(shock.code)}
           />
         )}
         <Scenario
-          tag="Disruption"
-          title="Localization budget cut by 40%"
+          title={budgetTitle}
           detail={`${usd(c.budgetUsd)} becomes ${usd(cutBudget)}. Which language work survives?`}
+          isActive={activeLabel === budgetTitle}
+          version={session.version}
           disabled={isBusy}
-          onRun={() => onReplan({ budgetUsd: cutBudget }, "Localization budget cut by 40%")}
+          onRun={() => onReplan({ budgetUsd: cutBudget }, budgetTitle)}
         />
       </div>
 
@@ -65,7 +71,7 @@ export function WarRoom({ history, isBusy, isReplanning, progressLine, onReplan 
       {history.length > 1 ? <RevisionCompare history={history} /> : <p className="mt-8 rounded-2xl border border-dashed border-line-2 p-6 text-sm text-bone-dim">Run a scenario and the original and revised strategies will appear here, side by side, with the reasons for every change.</p>}
 
       <div className="panel mt-10 p-6">
-        <p className="eyebrow">Other changes to test</p>
+        <p className="eyebrow">Other changes to test on the strategy shown</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {session.plan.markets.map((m) => <button key={m.code} type="button" disabled={isBusy} onClick={() => remove(m.code)} className="btn" aria-label={`Remove ${m.name} and replan`}>Remove {m.name}</button>)}
           <button type="button" disabled={isBusy || c.maxMarkets <= 1} onClick={() => onReplan({ maxMarkets: c.maxMarkets - 1 }, `Prioritise ${c.maxMarkets - 1} markets`)} className="btn">Prioritise fewer markets ({c.maxMarkets} → {c.maxMarkets - 1})</button>
@@ -90,13 +96,16 @@ export function WarRoom({ history, isBusy, isReplanning, progressLine, onReplan 
   );
 }
 
-function Scenario({ tag, title, detail, disabled, onRun }: { tag: string; title: string; detail: string; disabled: boolean; onRun: () => void }) {
+type ScenarioProps = { title: string; detail: string; isActive: boolean; version: number; disabled: boolean; onRun: () => void };
+
+/** Available disruption. The one that produced the revision on screen is marked, so "can run" never looks like "is showing". */
+function Scenario({ title, detail, isActive, version, disabled, onRun }: ScenarioProps) {
   return (
-    <button type="button" disabled={disabled} onClick={onRun} className="panel p-7 text-left transition-colors hover:border-accent disabled:opacity-50">
-      <p className="eyebrow text-removed-ink">{tag}</p>
+    <button type="button" disabled={disabled} onClick={onRun} aria-current={isActive ? "true" : undefined} className={`panel p-7 text-left transition-colors hover:border-accent disabled:opacity-50 ${isActive ? "border-accent" : ""}`}>
+      <p className={`eyebrow ${isActive ? "text-accent" : "text-removed-ink"}`}>{isActive ? `Showing now · v${version}` : "Disruption"}</p>
       <span className="display mt-3 block text-3xl leading-tight sm:text-4xl">{title}</span>
       <span className="mt-3 block text-sm text-bone-dim">{detail}</span>
-      <span className="mt-6 inline-flex text-sm text-accent">Run this scenario</span>
+      <span className="mt-6 inline-flex text-sm text-accent">{isActive ? "Its result is displayed below. Run again to apply it once more." : "Run this scenario"}</span>
     </button>
   );
 }

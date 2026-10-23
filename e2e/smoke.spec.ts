@@ -55,6 +55,10 @@ test("judge journey: brief edit, strategy, budget maths, atlas, Germany withdraw
   await expect(page.getByText("Revision v2 → v3")).toBeVisible();
   await expect(page.locator('[aria-label="Strategy revision"]')).toContainText(`of ${usd(54000)} planned`);
 
+  // The scenario that produced the displayed revision is marked, and the revision itself is labelled.
+  await expect(page.getByText("Currently displayed")).toBeVisible();
+  await expect(page.locator('button[aria-current="true"]')).toContainText("Localization budget cut by 40%");
+
   // Strategy comparison against the original.
   await page.getByRole("button", { name: "vs original v1" }).click();
   await expect(page.getByText("Revision v1 → v3")).toBeVisible();
@@ -84,4 +88,21 @@ test("brief dialog closes with Escape and does not start research", async ({ pag
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByRole("button", { name: "Reveal the strategy" })).toBeEnabled();
+});
+
+test.describe("mobile", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("strategy folds behind per-market details and the budget is one tap away", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Reveal the strategy", exact: true }).click();
+    await expect(page.getByText("Independent check passed —")).toBeVisible();
+    const first = page.locator("#strategy ~ ol > li").first();
+    await expect(first.getByRole("button", { name: "Inspect on the atlas" })).toBeHidden();
+    await first.getByRole("button", { name: /^Why / }).click();
+    await expect(first.getByRole("button", { name: "Inspect on the atlas" })).toBeVisible();
+    await page.locator('a[href="#budget"]').last().click();
+    await expect(page.getByRole("heading", { name: "Where the localization money goes." })).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
 });

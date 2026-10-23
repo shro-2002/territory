@@ -48,7 +48,7 @@ export function MarketInspector({ session, code }: Props) {
         <div className="mt-5 space-y-3 border-t border-line pt-5 text-sm">
           <p className="leading-relaxed text-bone">{reading.overlap}</p>
           <p className="text-bone-dim">{reading.comparisonLabel}.</p>
-          <div className="flex items-center justify-between gap-3"><span className="text-bone-faint">Evidence strength</span><EvidenceMeter strength={evidenceOf(r)} /></div>
+          <div className="flex items-center justify-between gap-3"><span className="text-bone-faint">Confidence</span><EvidenceMeter strength={evidenceOf(r)} /></div>
           {r.scoreRange && <p className="text-xs leading-relaxed text-bone-faint">Overlap ratio {r.score.toFixed(2)}× (from {r.scoreRange[0].toFixed(2)} to {r.scoreRange[1].toFixed(2)} depending on which genre baseline is left out). Markets whose ranges overlap are not meaningfully different. This is taste overlap, not proof of buyer or audience demand.</p>}
         </div>
       )}

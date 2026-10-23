@@ -13,6 +13,7 @@ const check = (ok: boolean, what: string) => {
 };
 
 /** Buffers /api/agent responses (route.fetch) so the test can read the session the UI received. */
+let apiSource = "unknown";
 let pending: ((v: { session: Session; calls: Array<{ cacheHit: boolean }> }) => void) | null = null;
 function nextSession(): Promise<{ session: Session; calls: Array<{ cacheHit: boolean }> }> {
   return new Promise((resolve) => (pending = resolve));
@@ -23,21 +24,23 @@ async function text(page: Page, selector: string) {
 }
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, extraHTTPHeaders: { "x-forwarded-for": `10.6.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` } })).newPage();
 await page.route("**/api/agent", async (route) => {
   const response = await route.fetch();
+  apiSource = response.headers()["x-territory-source"] ?? "unknown";
   const body = await response.text();
   const result = body.split("\n").filter(Boolean).map((l) => JSON.parse(l)).find((m) => m.type === "result");
   if (result) pending?.({ session: result.session, calls: result.calls });
   await route.fulfill({ response, body });
 });
 await page.goto(BASE);
-const source = ((await page.locator("header").first().textContent()) ?? "").includes("Live Qloo API") ? "live" : "mock";
-process.stdout.write(`source: ${source}\n`);
 
 const first = nextSession();
 await page.getByRole("button", { name: "Reveal the strategy", exact: true }).click();
 const { session: v1, calls } = await first;
+const source = apiSource;
+check(source === "live", `API served live-source evidence (x-territory-source: ${source})`);
+check(((await page.locator("header").first().textContent()) ?? "").includes("Live Qloo API"), "page is labelled Live Qloo API");
 await page.getByText("Independent check passed —").waitFor();
 process.stdout.write(`v1: ${v1.plan.markets.map((m) => `${m.code}/${m.mode}`).join(", ")} · ${calls.length} calls (${calls.filter((c) => !c.cacheHit).length} live)\n`);
 
@@ -57,6 +60,7 @@ const body = await page.locator("main").innerText();
 check(source === "mock" || !body.includes("[MOCK]"), "no mock titles on a live page");
 check(source === "mock" || v1.claims.every((cl) => cl.source !== "mock"), "no mock-sourced claims in a live session");
 check(!/strong fit|weak fit|promising fit/i.test(body), "no strong/weak/promising market grades");
+check(!/survives|portability|baseline genre/i.test(await text(page, "#strategy ~ ol")), "strategy cards use plain wording");
 check(!/probabilit|will succeed|guarantee/i.test(body), "no success-probability language");
 
 const shock = v1.plan.markets.find((m) => m.code === "DE") ?? v1.plan.markets.find((m) => m.mode !== "original") ?? v1.plan.markets[0];
@@ -78,6 +82,7 @@ await page.getByText("Revision v2 → v3").waitFor();
 check(v3.input.constraints.budgetUsd === Math.round(v2.input.constraints.budgetUsd * 0.6), "budget cut is exactly 40%");
 check(v3.plan.totalCostUsd <= v3.input.constraints.budgetUsd && v3.violations.length === 0, "v3 within budget, no violations");
 check((await text(page, '[aria-label="Strategy revision"]')).includes(usd(v3.plan.totalCostUsd)), "v3 spend shown");
+check((await page.locator('button[aria-current="true"]').innerText()).includes("Localization budget cut by 40%"), "the budget-cut scenario is marked as showing now");
 
 await browser.close();
 process.stdout.write(failures.length ? `\n${failures.length} FAILED\n` : "\nall checks passed\n");

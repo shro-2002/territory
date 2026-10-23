@@ -43,10 +43,10 @@ export function RevisionCompare({ history }: Props) {
   const stats = revisionStats(rev);
 
   return (
-    <div ref={root} className="mt-10 scroll-mt-24" aria-label="Strategy revision">
+    <div ref={root} className="mt-10 scroll-mt-24 border-l-2 border-accent pl-4 sm:pl-6" aria-label="Strategy revision">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow text-accent">Revision v{base.session.version} → v{current.session.version}</p>
+          <p className="flex flex-wrap items-center gap-3 text-sm text-accent"><span className="rounded-full bg-accent/15 px-3 py-1 font-medium">Currently displayed</span><span className="eyebrow text-accent">Revision v{base.session.version} → v{current.session.version}</span></p>
           <h3 className="display mt-2 text-4xl leading-tight">{current.label}</h3>
         </div>
         {history.length > 2 && (

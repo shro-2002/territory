@@ -24,7 +24,7 @@ async function span(page: Page, from: string, to: string, path: string) {
 
 const browser = await chromium.launch();
 for (const v of VIEWPORTS) {
-  const page = await (await browser.newContext({ ...v, reducedMotion: "no-preference" })).newPage();
+  const page = await (await browser.newContext({ ...v, reducedMotion: "no-preference", extraHTTPHeaders: { "x-forwarded-for": `10.5.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` } })).newPage();
   await page.goto(BASE);
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `${OUT}/A-hero-${v.name}.png` });

@@ -25,9 +25,9 @@ export interface Reading {
 }
 
 const COMPARISON_LABEL: Record<BaselineComparison, string> = {
-  above: "Above genre baseline in every check",
-  mixed: "Depends on the baseline genre",
-  below: "Below genre baseline in every check",
+  above: "Above a typical genre, however it is measured",
+  mixed: "Close to a typical genre; the result shifts with the comparison",
+  below: "Below a typical genre, however it is measured",
   unknown: "Not enough evidence to compare",
 };
 
@@ -37,9 +37,9 @@ export function readingOf(r: Pick<MarketResearch, "score" | "scoreRange">): Read
   const comparison: BaselineComparison = lo > BASELINE ? "above" : hi < BASELINE ? "below" : "mixed";
   const pct = Math.round(Math.abs(r.score - BASELINE) * 100);
   const overlap =
-    r.score >= RATIO_WORDING ? `${r.score.toFixed(1)}× as much of your comps' taste survives here as a typical genre's.`
-    : pct === 0 ? "About as much of your comps' taste survives here as a typical genre's."
-    : `${pct}% ${r.score > BASELINE ? "more" : "less"} of your comps' taste survives here than a typical genre's.`;
+    r.score >= RATIO_WORDING ? `${r.score.toFixed(1)}× as much of your comparable films' taste carries over here as a typical genre's.`
+    : pct === 0 ? "About as much of your comparable films' taste carries over here as a typical genre's."
+    : `${pct}% ${r.score > BASELINE ? "more" : "less"} of your comparable films' taste carries over here than a typical genre's.`;
   return { overlap, comparison, comparisonLabel: COMPARISON_LABEL[comparison] };
 }
 

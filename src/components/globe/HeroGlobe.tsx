@@ -30,7 +30,7 @@ const token = (name: string) => getComputedStyle(document.documentElement).getPr
 const ARC_POINTS = 56;
 const MAX_ARCS = 10;
 const CAMERA_Z = 5.4;
-const DOT_SIZE = 11;
+const DOT_SIZE = 13;
 const DEFAULT_LNG = 10;
 
 const DOT_VERT = `
@@ -47,12 +47,12 @@ uniform vec3 uColor; varying float vFacing;
 void main(){
   float d = length(gl_PointCoord - 0.5);
   if (d > 0.5) discard;
-  gl_FragColor = vec4(uColor, smoothstep(0.0, 0.3, vFacing) * 0.9 * (1.0 - d));
+  gl_FragColor = vec4(uColor, smoothstep(0.0, 0.3, vFacing) * 1.0 * (1.0 - d));
 }`;
 const GLOW_VERT = `varying vec3 vNormal; void main(){ vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 // Back faces of a slightly larger sphere: brightest where they meet the globe's edge, fading outward.
 const GLOW_FRAG = `uniform vec3 uHalo; varying vec3 vNormal; void main(){ float t = clamp(-vNormal.z / 0.5, 0.0, 1.0); float i = pow(t, 3.0) * 0.5; gl_FragColor = vec4(uHalo, i); }`;
-const CORE_FRAG = `uniform vec3 uCore; uniform vec3 uRim; varying vec3 vNormal; void main(){ float rim = pow(1.0 - max(0.0, vNormal.z), 3.5); gl_FragColor = vec4(mix(uCore, uRim, rim * 0.6), 1.0); }`;
+const CORE_FRAG = `uniform vec3 uCore; uniform vec3 uRim; varying vec3 vNormal; void main(){ float rim = pow(1.0 - max(0.0, vNormal.z), 3.5); gl_FragColor = vec4(mix(uCore, uRim, rim * 0.8), 1.0); }`;
 
 /** Circular mean of longitudes, so Tokyo and Los Angeles average to the Pacific rather than Europe. */
 function meanLng(codes: string[]): number | null {

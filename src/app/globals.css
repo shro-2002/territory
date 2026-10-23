@@ -49,8 +49,8 @@
 
   /* Globe (read by the WebGL scene at start-up) */
   --globe-core: #070912;
-  --globe-rim: #5a47a8;
-  --globe-dots: #d6cfee;
+  --globe-rim: #7a63d0;
+  --globe-dots: #e6e0f6;
   --globe-halo: #6450c4;
   --globe-candidate: #d9d2e8;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { useId, useState, type ReactNode } from "react";
 
 import type { Session } from "@/lib/agent/agent";
 import { nextSteps, strategyItems, uncertainties, type BaselineComparison, type StrategyItem } from "@/lib/territory/view-model";
@@ -42,6 +43,13 @@ export function StrategySummary({ session, stats, onInspect }: Props) {
       </SectionHead>
 
       {items.length > 0 && (
+        <a href="#budget" className="mb-6 flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-line bg-surface-glass px-4 py-3 text-sm transition-colors hover:border-accent">
+          <span className="text-bone-dim">Localization budget</span>
+          <span className="tabular-nums text-bone">${session.plan.totalCostUsd.toLocaleString("en-US")} of ${c.budgetUsd.toLocaleString("en-US")} planned</span>
+          <span className="text-accent">See the breakdown</span>
+        </a>
+      )}
+      {items.length > 0 && (
         <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {items.map((it, i) => <MarketCard key={it.code} item={it} rank={i + 1} onInspect={onInspect} />)}
         </ol>
@@ -53,7 +61,7 @@ export function StrategySummary({ session, stats, onInspect }: Props) {
       </p>
 
       <div className="mt-12 grid gap-4 lg:grid-cols-3">
-        <Panel title="Do next" tone="var(--accent)">
+        <Panel title="Do next" tone="var(--accent)" defaultOpen>
           <ul className="space-y-3">{nextSteps(session).map((s) => <li key={s} className="flex gap-3"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent" />{s}</li>)}</ul>
         </Panel>
         <Panel title="What remains uncertain" tone="var(--caution)">
@@ -65,11 +73,17 @@ export function StrategySummary({ session, stats, onInspect }: Props) {
   );
 }
 
-function Panel({ title, tone, children }: { title: string; tone: string; children: React.ReactNode }) {
+/** Always open from md up; on small screens the body folds behind its title so the page stays short. */
+function Panel({ title, tone, defaultOpen = false, children }: { title: string; tone: string; defaultOpen?: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const id = useId();
   return (
     <div className="panel p-6">
-      <p className="eyebrow" style={{ color: tone }}>{title}</p>
-      <div className="mt-4 text-sm leading-relaxed text-bone-dim">{children}</div>
+      <p className="eyebrow hidden md:block" style={{ color: tone }}>{title}</p>
+      <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)} className="eyebrow flex min-h-11 w-full items-center justify-between md:hidden" style={{ color: tone }}>
+        {title}<span aria-hidden className="text-lg">{open ? "−" : "+"}</span>
+      </button>
+      <div id={id} className={`${open ? "block" : "hidden"} mt-2 text-sm leading-relaxed text-bone-dim md:mt-4 md:block`}>{children}</div>
     </div>
   );
 }
@@ -85,21 +99,22 @@ function QlooPanel({ session, stats }: { session: Session; stats: CallStats | nu
     ...(stats ? [["Qloo requests", `${stats.live + stats.cached} (${stats.live} live)`] as [string, string]] : []),
   ];
   return (
-    <div className="panel p-6">
-      <p className="eyebrow text-evidence">What Qloo contributes</p>
-      <p className="mt-4 text-sm leading-relaxed text-bone-dim">Qloo&apos;s taste graph supplies the cultural neighbourhood of your comps in each country. Territory&apos;s planner — deterministic, no AI arithmetic — turns it into a budgeted plan.</p>
-      <dl className="mt-4 divide-y divide-line text-sm">
+    <Panel title="What Qloo contributes" tone="var(--evidence)">
+      <p>Qloo&apos;s taste graph supplies the cultural neighbourhood of your comps in each country. Territory&apos;s planner — deterministic, no AI arithmetic — turns it into a budgeted plan.</p>
+      <dl className="mt-4 divide-y divide-line">
         {rows.map(([k, v]) => (
           <div key={k} className="flex justify-between gap-4 py-2"><dt className="text-bone-dim">{k}</dt><dd className="tabular-nums text-bone">{v}</dd></div>
         ))}
       </dl>
-    </div>
+    </Panel>
   );
 }
 
 function MarketCard({ item, rank, onInspect }: { item: StrategyItem; rank: number; onInspect: (code: string) => void }) {
   const reduce = useReducedMotion();
   const tone = COMPARISON_TONE[item.reading.comparison];
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
   return (
     <motion.li
       layout={!reduce}
@@ -113,16 +128,20 @@ function MarketCard({ item, rank, onInspect }: { item: StrategyItem; rank: numbe
       <p className="mt-4 inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: `color-mix(in oklab, ${tone} 50%, transparent)`, color: tone }}>
         <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone }} />{item.reading.comparisonLabel}
       </p>
-      <p className="mt-4 text-sm leading-relaxed text-bone-dim">{item.reason}</p>
-      <dl className="mt-5 space-y-3 border-t border-line pt-4 text-sm">
-        <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Localization</dt><dd className="text-right">{item.formatLabel}</dd></div>
-        <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Evidence strength</dt><dd><EvidenceMeter strength={item.evidence} /></dd></div>
-        <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Overlap ratio</dt><dd className="tabular-nums text-bone-dim">{item.score.toFixed(2)}×{item.scoreRange ? ` (${item.scoreRange[0].toFixed(2)}–${item.scoreRange[1].toFixed(2)})` : ""}</dd></div>
-      </dl>
-      {item.localComps.length > 0 && (
-        <p className="mt-4 text-xs leading-relaxed text-bone-faint">Local titles near yours: <span className="text-bone-dim">{item.localComps.join(", ")}</span></p>
-      )}
-      <button type="button" onClick={() => onInspect(item.code)} className="btn mt-5 w-full">Inspect on the atlas</button>
+      <p className="mt-3 text-sm text-bone md:hidden">{item.formatLabel}</p>
+      <div id={bodyId} className={`${open ? "block" : "hidden"} md:block`}>
+        <p className="mt-4 text-sm leading-relaxed text-bone-dim">{item.reason}</p>
+        <dl className="mt-5 space-y-3 border-t border-line pt-4 text-sm">
+          <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Language work</dt><dd className="text-right">{item.formatLabel}</dd></div>
+          <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Confidence</dt><dd><EvidenceMeter strength={item.evidence} /></dd></div>
+          <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Taste overlap vs typical genre</dt><dd className="text-right tabular-nums text-bone-dim">{item.score.toFixed(2)}×{item.scoreRange ? ` (${item.scoreRange[0].toFixed(2)}–${item.scoreRange[1].toFixed(2)})` : ""}</dd></div>
+        </dl>
+        {item.localComps.length > 0 && (
+          <p className="mt-4 text-xs leading-relaxed text-bone-faint">Local titles near yours: <span className="text-bone-dim">{item.localComps.join(", ")}</span></p>
+        )}
+        <button type="button" onClick={() => onInspect(item.code)} className="btn mt-5 w-full">Inspect on the atlas</button>
+      </div>
+      <button type="button" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen(!open)} className="btn mt-4 w-full md:hidden">{open ? "Hide details" : `Why ${item.name}?`}</button>
     </motion.li>
   );
 }
