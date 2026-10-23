@@ -38,6 +38,8 @@ export interface QlooClientOptions {
   sleep?: (ms: number) => Promise<void>;
   /** Prefix for call ids so ids stay unique across requests that share one session. */
   callIdPrefix?: string;
+  /** Epoch ms after which no new network call starts (host execution limits). Cache hits still work. */
+  deadlineAt?: number;
 }
 
 /** Stable query string: sorted keys, undefined dropped. Cache key and URL share it. */
@@ -72,6 +74,7 @@ export class QlooClient {
       source: this.source,
       sleep: options.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))),
       callIdPrefix: options.callIdPrefix ?? "q",
+      deadlineAt: options.deadlineAt ?? Number.POSITIVE_INFINITY,
     };
     if (this.source === "live" && !this.opts.apiKey) {
       throw new QlooError("QLOO_API_KEY is not set; use the mock client or set the env var", "NO_KEY");
@@ -106,8 +109,9 @@ export class QlooClient {
       return cached;
     }
     if (this.liveCalls >= this.opts.callBudget) {
-      throw new QlooError(`Qloo call budget of ${this.opts.callBudget} exhausted`, "BUDGET_EXCEEDED");
+      throw new QlooError(this.opts.callBudget === 0 ? "live Qloo research unavailable (quota guard); only cached evidence can be used" : `Qloo call budget of ${this.opts.callBudget} exhausted`, "BUDGET_EXCEEDED");
     }
+    if (Date.now() >= this.opts.deadlineAt) throw new QlooError("research time limit reached", "TIMEOUT");
     this.liveCalls += 1;
     const body = slimBody(await this.withSlot(() => this.fetchWithRetry(path, params, qs)));
     await this.opts.cache.set(cacheKey, body);
@@ -119,7 +123,9 @@ export class QlooClient {
     for (let attempt = 1; ; attempt++) {
       const started = Date.now();
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs);
+      // Never let one call outlive the request deadline.
+      const timeoutMs = Math.max(1000, Math.min(this.opts.timeoutMs, this.opts.deadlineAt - Date.now()));
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const res = await this.opts.fetchImpl(url, {
           method: "GET",

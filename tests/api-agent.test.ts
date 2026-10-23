@@ -26,9 +26,13 @@ describe("POST /api/agent", () => {
     if (result?.type !== "result") return;
     expect(result.calls.every((c) => c.source === "mock")).toBe(true);
     expect(JSON.stringify(result)).not.toMatch(/x-api-key/i);
+    // The browser gets no raw neighbourhood lists: context is null in the session and only present encrypted.
+    expect(result.session.context).toBeNull();
+    expect(result.context).toBeTruthy();
+    expect(JSON.stringify(result)).not.toMatch(/Related [0-9a-f]{6}"/);
 
     const target = result.session.plan.markets[0].code;
-    const re = await post({ action: "replan", session: result.session, token: result.token, patch: { excludedMarkets: [target] } }, "203.0.113.10");
+    const re = await post({ action: "replan", session: result.session, token: result.token, context: result.context, patch: { excludedMarkets: [target] } }, "203.0.113.10");
     const revised = re.messages.at(-1);
     expect(revised?.type).toBe("result");
     if (revised?.type === "result") expect(revised.session.plan.markets.map((m) => m.code)).not.toContain(target);
@@ -41,8 +45,11 @@ describe("POST /api/agent", () => {
     const forged = structuredClone(result.session);
     const first = Object.values(forged.research)[0];
     first.score = 99;
-    const res = await post({ action: "replan", session: forged, token: result.token, patch: { budgetUsd: 1000 } }, "203.0.113.11");
+    const res = await post({ action: "replan", session: forged, token: result.token, context: result.context, patch: { budgetUsd: 1000 } }, "203.0.113.11");
     expect(res.status).toBe(400);
+    const badContext = `${result.context!.slice(0, -4)}AAAA`;
+    const res2 = await post({ action: "replan", session: result.session, token: result.token, context: badContext, patch: { budgetUsd: 1000 } }, "203.0.113.11");
+    expect(res2.status).toBe(400);
   });
 
   it("rejects malformed bodies and invalid briefs without crashing", async () => {

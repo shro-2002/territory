@@ -111,7 +111,13 @@ export async function runAgent(rawInput: unknown, { client, onEvent }: AgentDeps
   if (unknownMarkets.length) throw new Error(`Unsupported market codes: ${unknownMarkets.join(", ")}`);
   t.log("INPUT_VALIDATION", `"${input.title}": ${input.comps.length} comps, ${input.targetMarkets.length} candidate markets, budget $${input.constraints.budgetUsd.toLocaleString("en-US")}`);
 
-  const comps = await Promise.all(input.comps.map((c) => resolveComp(client, c)));
+  let comps: ResolvedComp[];
+  try {
+    comps = await Promise.all(input.comps.map((c) => resolveComp(client, c)));
+  } catch (err) {
+    t.log("ENTITY_RESOLUTION", `Could not look up the comps in Qloo (${(err as Error).message.slice(0, 160)}). No strategy produced.`);
+    return failedSession(input, [], t);
+  }
   const usable = comps.filter((c) => c.entityId);
   t.log("ENTITY_RESOLUTION", comps.map((c) => `${c.input.name} → ${c.status}${c.name ? ` (${c.name}${c.year ? `, ${c.year}` : ""})` : ""}`).join("; "));
   if (usable.length === 0) {

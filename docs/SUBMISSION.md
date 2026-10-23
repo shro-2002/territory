@@ -61,3 +61,20 @@ pitching, every market claim traceable to Qloo requests, and refusal when eviden
 
 **Path to product.** Validate with sales agents; backtest on released titles; add TV, festival and buyer data; sell per-title
 reports to producers and seats to sales agents.
+
+---
+
+# 90-second demo video plan (screen recording, no voice-over required; captions on screen)
+
+| Time | Screen | Caption |
+|---|---|---|
+| 0–8 s | Landing; film card; dim atlas | "An unreleased indie film. Where should it sell first — and what if the plan breaks?" |
+| 8–20 s | Click **Run research**; trace streams; atlas lights | "Territory researches each market in Qloo's taste graph" |
+| 20–32 s | Click a market: lift, range, local comps, Qloo request ids | "Evidence per market — relative cultural overlap, not a box-office forecast" |
+| 32–40 s | Release plan, spend meter, ✓ independent check | "A plan under budget, verified independently" |
+| 40–58 s | **Reality shock → Germany buyer pulled out**; trace: impact analysis, reserve research (Austria first) | "The agent works out what broke and researches only what it must" |
+| 58–70 s | Revision v1→v2: evidence ledger, tool decisions, drivers | "Every change explained: Qloo evidence, cost or your constraint" |
+| 70–78 s | **Financier cut 40%** → dubs become subtitles, no new research | "A budget cut needs no new research — it just re-optimizes" |
+| 78–86 s | Evidence Lab: ablation/E6 rows | "Without Qloo: the same plan for every film" |
+| 86–90 s | Export brief opens | "A distribution research brief you can send" |
+Record on the deployed URL after the external test; keep the "cached" evidence-source line visible (honesty).

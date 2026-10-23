@@ -141,4 +141,11 @@ describe("replan (Distribution War Room)", () => {
     expect(drivers.every((d) => d === "cost" || d === "cultural-evidence")).toBe(true);
     expect(drivers).toContain("cost");
   });
+
+  it("returns a failed session, not an error, when the quota guard blocks uncached comp lookups", async () => {
+    const guarded = new QlooClient({ apiKey: "mock", source: "mock", fetchImpl: createMockFetch(), sleep: async () => {}, callBudget: 0 });
+    const s = await runAgent(input, { client: guarded });
+    expect(s.status).toBe("failed");
+    expect(s.trace.at(-1)?.message).toMatch(/quota guard/);
+  });
 });

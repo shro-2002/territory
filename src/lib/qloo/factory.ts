@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { Cache, QlooClient, QlooClientOptions } from "./client";
+import { isHosted } from "../server/hosting";
 import { hasRedis, redis } from "../server/redis";
 import { createMockFetch, MockOptions } from "./mock";
 
@@ -51,10 +52,10 @@ export class RedisCache implements Cache {
 export const PRIVATE_DIR = path.join(process.cwd(), ".private");
 const SEED_CACHE_DIR = path.join(PRIVATE_DIR, "qloo-cache");
 
-// Serverless filesystems are read-only except the temp dir. On Vercel the deployment may carry a
+// Serverless filesystems are read-only except the temp dir. A hosted deployment may carry a
 // private, read-only seed of the cache (uploaded by `vercel deploy`, never committed to git).
 function liveCache(): Cache {
-  if (!process.env.VERCEL) return new FileCache(SEED_CACHE_DIR);
+  if (!isHosted()) return new FileCache(SEED_CACHE_DIR);
   const tmp = new FileCache(path.join(os.tmpdir(), "territory-qloo-cache"));
   const seed = new FileCache(SEED_CACHE_DIR);
   // Redis first so new research is shared; tmp and seed still answer when Redis is absent or down.

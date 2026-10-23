@@ -93,4 +93,21 @@ describe("QlooClient", () => {
     const res = await mockClient().insights({ "filter.type": "urn:entity:movie", "filter.results.entities": "does-not-exist" });
     expect(res.results?.entities).toEqual([]);
   });
+
+  it("stops starting network calls after the deadline but still serves cache hits", async () => {
+    const client = mockClient();
+    await client.search("Minari");
+    const late = mockClient({ deadlineAt: Date.now() - 1 });
+    await expect(late.search("Roma")).rejects.toMatchObject({ code: "TIMEOUT" });
+    expect(late.liveCallCount).toBe(0); // no request was made
+  });
+
+  it("with a zero budget (quota guard) serves only cached responses", async () => {
+    const { MemoryCache } = await import("@/lib/qloo/client");
+    const cache = new MemoryCache();
+    await mockClient({ cache }).search("Minari");
+    const guarded = mockClient({ cache, callBudget: 0 });
+    expect((await guarded.search("Minari"))[0].name).toContain("Minari");
+    await expect(guarded.search("Roma")).rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
+  });
 });

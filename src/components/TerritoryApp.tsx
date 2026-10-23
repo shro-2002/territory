@@ -15,7 +15,7 @@ import { MarketPanel } from "./MarketPanel";
 import { TracePanel } from "./TracePanel";
 import { WarRoom } from "./WarRoom";
 
-type Version = { session: Session; token: string; label: string };
+type Version = { session: Session; token: string; context: string | null; label: string };
 type Props = { initialInput: AgentInput; summary: ExperimentSummary; source: "live" | "mock" };
 
 export function TerritoryApp({ initialInput, summary, source }: Props) {
@@ -28,12 +28,15 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
 
   const current = versions.at(-1) ?? null;
   const previous = versions.length > 1 ? versions[versions.length - 2] : null;
   const session = current?.session ?? null;
+  // The research context stays server-side (encrypted); its presence means the plan can be revised.
+  const canReplan = Boolean(current?.context);
   const doneMarkets = new Set(trace.filter((e) => e.kind === "progress" && e.market).map((e) => e.market!));
   const pending = busy ? (busy === "run" ? input.targetMarkets : []).filter((c) => !doneMarkets.has(c)) : [];
 
@@ -42,6 +45,7 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
     abort.current = new AbortController();
     setBusy(mode);
     setError(null);
+    setNotice(null);
     setTrace([]);
     setStartedAt(Date.now());
     setLastCalls(null);
@@ -54,8 +58,9 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
       await streamAgent(body, (m) => {
         if (m.type === "trace") setTrace((t) => [...t, m.event]);
         else if (m.type === "error") setError(m.message);
+        else if (m.type === "notice") setNotice(m.message);
         else {
-          setVersions((v) => [...v, { session: m.session, token: m.token, label }]);
+          setVersions((v) => [...v, { session: m.session, token: m.token, context: m.context, label }]);
           setCalls((c) => [...c, ...m.calls]);
           const live = m.calls.filter((x) => !x.cacheHit).length;
           setLastCalls({ live, cached: m.calls.length - live });
@@ -76,7 +81,8 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
   };
   const replan = (patch: Partial<Constraints>, label: string) => {
     if (!current) return;
-    void execute({ action: "replan", session: current.session, token: current.token, patch }, label, "replan", false);
+    if (!current.context) return;
+    void execute({ action: "replan", session: current.session, token: current.token, context: current.context, patch }, label, "replan", false);
   };
   const exportBrief = () => {
     if (!session) return;
@@ -122,8 +128,9 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
             <FilmCard input={input} isBusy={Boolean(busy)} hasRun={Boolean(session)} onRun={() => run(input)} onEdit={() => setIsEditing(true)} />
           )}
           {error && <p role="alert" className="panel border-ember/60 p-4 text-sm text-ember">{error}</p>}
+          {notice && <p role="status" className="panel border-amber/50 p-4 text-sm text-amber">{notice}</p>}
           <TracePanel events={trace} isRunning={Boolean(busy)} startedAt={startedAt} lastCalls={lastCalls} />
-          {session && session.context && !busy && (
+          {session && canReplan && !busy && (
             <a href="#reality-shock" className="btn-primary w-full justify-center">Next: break the plan in the War Room ↓</a>
           )}
         </div>
@@ -157,7 +164,7 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
         </div>
       </section>
 
-      {session && session.context && (
+      {session && canReplan && (
         <section className="mt-8">
           <WarRoom key={session.version} session={session} previous={previous?.session ?? null} isBusy={Boolean(busy)} onReplan={replan} onSelect={setSelected} />
           {versions.length > 1 && (
@@ -165,7 +172,7 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
           )}
         </section>
       )}
-      {session && !session.context && <p className="panel mt-8 p-5 text-sm text-ember">Research failed for this brief, so there is no plan to revise. See the agent activity for the reason, then edit the brief.</p>}
+      {session && !canReplan && <p className="panel mt-8 p-5 text-sm text-ember">Research failed for this brief, so there is no plan to revise. See the agent activity for the reason, then edit the brief.</p>}
 
       <section className="mt-8">
         <EvidenceLab key={session ? "with-session" : "empty"} session={session} calls={calls} summary={summary} />

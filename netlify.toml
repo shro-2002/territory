@@ -1,0 +1,15 @@
+# Netlify (Free plan). Next.js is built with Netlify's official Next.js runtime (auto-detected).
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+# The private Qloo seed cache ships inside the server function only (never in the publish directory or git).
+[functions]
+  included_files = [".private/qloo-cache/**"]
+
+# Runtime variables are set in the Netlify UI/CLI, not here (they would be build-only):
+#   QLOO_API_KEY, SESSION_SECRET (32+ chars), TERRITORY_HOSTED=1,
+#   optional UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN for live research with a global quota.
