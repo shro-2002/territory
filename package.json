@@ -9,8 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "experiments": "tsx scripts/experiments.ts",
-    "showcase": "tsx scripts/showcase.ts"
+    "experiments": "tsx --env-file-if-exists=.env.local scripts/experiments.ts",
+    "showcase": "tsx --env-file-if-exists=.env.local scripts/showcase.ts"
   },
   "dependencies": {
     "next": "16.4.2",
