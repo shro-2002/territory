@@ -18,8 +18,12 @@ export class FileCache implements Cache {
     }
   }
   async set(key: string, value: unknown) {
-    await mkdir(this.dir, { recursive: true });
-    await writeFile(path.join(this.dir, `${key}.json`), JSON.stringify(value));
+    try {
+      await mkdir(this.dir, { recursive: true });
+      await writeFile(path.join(this.dir, `${key}.json`), JSON.stringify(value));
+    } catch {
+      // A read-only or full filesystem must never fail a request; the response is still returned.
+    }
   }
 }
 

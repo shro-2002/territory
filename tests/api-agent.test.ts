@@ -38,6 +38,18 @@ describe("POST /api/agent", () => {
     if (revised?.type === "result") expect(revised.session.plan.markets.map((m) => m.code)).not.toContain(target);
   });
 
+  it("a budget-only patch keeps earlier exclusions (no schema defaults leak into the patch)", async () => {
+    const run = (await post({ action: "run", input: SHOWCASE_INPUT }, "203.0.113.13")).messages.at(-1);
+    if (run?.type !== "result") throw new Error("run failed");
+    const target = run.session.plan.markets[0].code;
+    const r2 = (await post({ action: "replan", session: run.session, token: run.token, context: run.context, patch: { excludedMarkets: [target] } }, "203.0.113.13")).messages.at(-1);
+    if (r2?.type !== "result") throw new Error("replan failed");
+    const r3 = (await post({ action: "replan", session: r2.session, token: r2.token, context: r2.context, patch: { budgetUsd: 30000 } }, "203.0.113.13")).messages.at(-1);
+    if (r3?.type !== "result") throw new Error("replan failed");
+    expect(r3.session.input.constraints.excludedMarkets).toEqual([target]);
+    expect(r3.session.plan.markets.map((m) => m.code)).not.toContain(target);
+  });
+
   it("rejects a replan whose session evidence was tampered with", async () => {
     const run = await post({ action: "run", input: SHOWCASE_INPUT }, "203.0.113.11");
     const result = run.messages.at(-1);

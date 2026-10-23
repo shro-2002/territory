@@ -9,7 +9,7 @@ import type { CallRecord } from "@/lib/qloo/types";
 import { researchDeadlineMs } from "@/lib/server/hosting";
 import { checkRateLimitShared, clientIp, reserveQlooCalls } from "@/lib/server/rate-limit";
 import { decrypt, encrypt, seal, SealConfigError, verifySeal } from "@/lib/server/seal";
-import { ConstraintsSchema } from "@/lib/territory/planner";
+import { ConstraintsPatchSchema } from "@/lib/territory/planner";
 
 // Below the stricter host limit (Netlify 60 s synchronous); research itself stops at researchDeadlineMs().
 export const maxDuration = 60;
@@ -22,7 +22,7 @@ const BodySchema = z.discriminatedUnion("action", [
     session: z.unknown(),
     token: z.string().min(10).max(200),
     context: z.string().min(10).max(300_000),
-    patch: ConstraintsSchema.partial(),
+    patch: ConstraintsPatchSchema,
   }),
 ]);
 

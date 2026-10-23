@@ -1,6 +1,6 @@
-/** True on a hosted deployment (set TERRITORY_HOSTED=1 on the host; Vercel is detected automatically). */
+/** True on a hosted deployment: TERRITORY_HOSTED=1, or a detected serverless runtime (Vercel, Netlify/AWS Lambda). */
 export function isHosted(): boolean {
-  return process.env.TERRITORY_HOSTED === "1" || Boolean(process.env.VERCEL);
+  return process.env.TERRITORY_HOSTED === "1" || Boolean(process.env.VERCEL || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
 }
 
 const DEFAULT_DEADLINE_MS = 50_000;

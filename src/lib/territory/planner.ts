@@ -18,6 +18,15 @@ export const ConstraintsSchema = z.object({
 });
 export type Constraints = z.infer<typeof ConstraintsSchema>;
 
+/** A revision patch: like Constraints but with no defaults, so omitted fields keep their current values. */
+export const ConstraintsPatchSchema = z.object({
+  budgetUsd: z.number().nonnegative().optional(),
+  maxMarkets: z.number().int().min(1).max(8).optional(),
+  excludedMarkets: z.array(z.string()).optional(),
+  excludedLanguages: z.array(z.string()).optional(),
+  subtitleFirst: z.boolean().optional(),
+});
+
 /** User-provided cost assumptions per language. Never presented as market facts. */
 export const LanguageCostSchema = z.object({ subtitleUsd: z.number().nonnegative(), dubUsd: z.number().nonnegative() });
 export type LanguageCost = z.infer<typeof LanguageCostSchema>;
