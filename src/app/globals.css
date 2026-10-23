@@ -1,53 +1,97 @@
 @import "tailwindcss";
 
 /*
- * Territory design tokens — "night screening room".
- * Cool midnight base, ivory type, violet = the plan / primary action, teal = Qloo evidence & research,
- * rose = removed / excluded, warm = caution and uncertainty only. Colour always carries meaning.
+ * Territory design tokens — "Velvet Noir".
+ * Obsidian and midnight-ink grounds, warm moonlight-ivory type, lacquered indigo surfaces.
+ * Semantic accents only: accent (amethyst) = the plan and primary action; evidence (cyan mist) = Qloo
+ * evidence and system intelligence; gold = rare premium emphasis; removed (dust rose) = excluded or broken;
+ * caution (gray-gold) = uncertainty and insufficient evidence; success (muted emerald) = verified.
+ * Every colour in the app resolves to one of these variables.
  */
 :root {
-  --ink: #06070c;
-  --ink-2: #0b0d16;
-  --ink-3: #121626;
-  --line: #1d2136;
-  --line-2: #2c3354;
-  --bone: #ecebf5;
-  --bone-dim: #a6abc4;
-  --bone-faint: #7f86a4;
+  /* Grounds */
+  --ink: #05060a; /* Obsidian Black */
+  --ink-2: #0a0d16; /* Blue Black */
+  --ink-3: #101426; /* Midnight Ink */
+  /* Surfaces */
+  --surface: #171c31; /* Smoked Indigo */
+  --surface-2: #1b2038; /* Velvet Navy */
+  --surface-glass: rgba(15, 18, 32, 0.72); /* Glass Shadow */
+  --line: #2a2f45;
+  --line-soft: rgba(42, 47, 69, 0.6);
+  --line-2: #3a3f5c;
+  /* Type */
+  --bone: #f2ece3; /* Moonlight Ivory */
+  --bone-dim: #c9c2d6; /* Soft Silver */
+  --bone-faint: #9d98ae; /* Muted Copy */
+  --on-accent: #0b0716;
 
-  --violet: #a093ff;
-  --violet-deep: #6c5ce7;
-  --teal: #4fd6cc;
-  --rose: #ff7d93;
-  --warm: #f0b27a;
-  --ok: #70e4aa;
+  /* Accents */
+  --accent: #9a7bff; /* Amethyst */
+  --accent-deep: #6a4fd8;
+  --evidence: #6ec7c2; /* Cyan Mist */
+  --gold: #d5a35b; /* Old Gold — premium emphasis only */
+  --removed: #a55a72; /* Dust Rose — fills, borders, hatching */
+  --removed-ink: #d58a9f; /* Dust Rose lifted for text (6:1 on surfaces; #A55A72 is only 3.3:1) */
+  --caution: #bfa474; /* muted gray-gold — uncertainty, insufficient evidence */
+  --success: #5baa86; /* Muted Emerald */
+
+  /* Atlas */
+  --map-land: #131729;
+  --map-land-line: #232842;
+  --map-candidate: #1e2340;
+  --map-graticule: #1f2440;
+  --map-insufficient: #1c1912;
+  --map-excluded: #1a1016;
+  --map-selected-from: #b49dff;
+  --map-selected-to: #6a4fd8;
+  --map-marker-ink: #0b0716;
+
+  /* Globe (read by the WebGL scene at start-up) */
+  --globe-core: #070912;
+  --globe-rim: #5a47a8;
+  --globe-dots: #d6cfee;
+  --globe-halo: #6450c4;
+  --globe-candidate: #d9d2e8;
+
+  /* Budget segments: one hue family, stepped in value, so spend reads as one plan */
+  --segment-1: #9a7bff;
+  --segment-2: #6ec7c2;
+  --segment-3: #7f73c9;
+  --segment-4: #4f8f8b;
+  --segment-5: #c9b8ff;
 
   /* Provenance (semantic, never decorative) */
-  --prov-qloo: var(--teal);
+  --prov-qloo: var(--evidence);
   --prov-user: var(--bone-dim);
-  --prov-hypothesis: var(--violet);
-  --prov-insufficient: var(--warm);
-  --prov-external: #84b4ff;
+  --prov-hypothesis: var(--accent);
+  --prov-insufficient: var(--caution);
+  --prov-external: #8fa6d6;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --glow-violet: 0 0 40px -8px rgba(160, 147, 255, 0.55);
+  --shadow-lacquer: 0 1px 0 rgba(242, 236, 227, 0.04) inset, 0 40px 90px -50px rgba(0, 0, 0, 0.95);
+  --glow-accent: 0 18px 50px -22px rgba(106, 79, 216, 0.55);
 }
 
 @theme inline {
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-line: var(--line);
   --color-line-2: var(--line-2);
   --color-bone: var(--bone);
   --color-bone-dim: var(--bone-dim);
   --color-bone-faint: var(--bone-faint);
-  --color-violet: var(--violet);
-  --color-violet-deep: var(--violet-deep);
-  --color-teal: var(--teal);
-  --color-rose: var(--rose);
-  --color-warm: var(--warm);
-  --color-ok: var(--ok);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-evidence: var(--evidence);
+  --color-gold: var(--gold);
+  --color-removed: var(--removed);
+  --color-removed-ink: var(--removed-ink);
+  --color-caution: var(--caution);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display-serif);
@@ -65,7 +109,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Soft aurora behind everything; fixed so sections feel like one continuous night sky. */
+/* Screening-room atmosphere: a dim projector haze from above, faint warmth below, dark vignette at the edges. */
 body::before {
   content: "";
   position: fixed;
@@ -73,9 +117,9 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(900px 600px at 82% -8%, rgba(108, 92, 231, 0.16), transparent 62%),
-    radial-gradient(700px 500px at -8% 38%, rgba(79, 214, 204, 0.07), transparent 60%),
-    radial-gradient(800px 500px at 60% 112%, rgba(108, 92, 231, 0.1), transparent 60%);
+    radial-gradient(1100px 700px at 78% -12%, rgba(78, 63, 160, 0.18), transparent 64%),
+    radial-gradient(900px 520px at 20% 115%, rgba(213, 163, 91, 0.045), transparent 62%),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
 }
 body::after {
   content: "";
@@ -83,16 +127,18 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.045;
+  opacity: 0.055;
+  mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
+/* Lacquered surface: smoked indigo catching light at the top edge, falling into glass shadow. */
 .panel {
-  background: linear-gradient(180deg, rgba(18, 22, 38, 0.82), rgba(11, 13, 22, 0.86));
-  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface) 38%, var(--surface-glass));
+  border: 1px solid var(--line-soft);
   border-radius: 18px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 30px 80px -40px rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-lacquer);
+  backdrop-filter: blur(12px);
 }
 
 .eyebrow {
@@ -109,7 +155,7 @@ body::after {
 }
 
 :focus-visible {
-  outline: 2px solid var(--violet);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
   border-radius: 6px;
 }
@@ -146,24 +192,24 @@ body::after {
   border-radius: 999px;
   padding: 0.6rem 1.15rem;
   font-size: 0.875rem;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--line);
   color: var(--bone);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-glass);
   transition: border-color 0.25s, background 0.25s, transform 0.15s, box-shadow 0.25s;
 }
 .btn:hover:not(:disabled) {
-  border-color: var(--violet);
-  background: rgba(160, 147, 255, 0.09);
+  border-color: color-mix(in oklab, var(--accent) 60%, var(--line));
+  background: color-mix(in oklab, var(--accent) 8%, var(--surface-glass));
 }
 .btn-primary {
   border-color: transparent;
-  background: linear-gradient(135deg, #b3a8ff, #7d6cf0);
-  color: #0a0820;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 88%, var(--bone)), var(--accent));
+  color: var(--on-accent);
   font-weight: 600;
-  box-shadow: var(--glow-violet);
+  box-shadow: 0 1px 0 rgba(242, 236, 227, 0.25) inset, var(--glow-accent);
 }
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 0 56px -6px rgba(160, 147, 255, 0.8);
+  background: color-mix(in oklab, var(--accent) 92%, var(--bone));
   transform: translateY(-1px);
 }
 .btn:active:not(:disabled),
@@ -177,14 +223,14 @@ body::after {
   gap: 0.4rem;
   min-height: 32px;
   border-radius: 999px;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--line);
   padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
   color: var(--bone-dim);
   transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
-.chip:hover { color: var(--bone); border-color: var(--violet); }
-.chip[aria-pressed="true"] { color: var(--bone); border-color: var(--violet); background: rgba(160, 147, 255, 0.12); }
+.chip:hover { color: var(--bone); border-color: color-mix(in oklab, var(--accent) 60%, var(--line)); }
+.chip[aria-pressed="true"] { color: var(--bone); border-color: var(--accent); background: color-mix(in oklab, var(--accent) 14%, transparent); }
 
 .field {
   width: 100%;

@@ -3,7 +3,7 @@
 import { chromium, type Page } from "@playwright/test";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
-const OUT = "submission/redesign";
+const OUT = process.env.OUT ?? "submission/redesign";
 const VIEWPORTS = [
   { name: "desktop", viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.5 },
   { name: "tablet", viewport: { width: 820, height: 1180 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },

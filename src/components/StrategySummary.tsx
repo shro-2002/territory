@@ -14,7 +14,7 @@ export interface CallStats {
 
 type Props = { session: Session; stats: CallStats | null; onInspect: (code: string) => void };
 
-const COMPARISON_TONE: Record<BaselineComparison, string> = { above: "var(--teal)", mixed: "var(--bone-dim)", below: "var(--warm)", unknown: "var(--bone-faint)" };
+const COMPARISON_TONE: Record<BaselineComparison, string> = { above: "var(--evidence)", mixed: "var(--bone-dim)", below: "var(--caution)", unknown: "var(--bone-faint)" };
 
 const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"];
 const ordinal = (n: number) => ORDINALS[n - 1] ?? `#${n}`;
@@ -29,7 +29,7 @@ export function StrategySummary({ session, stats, onInspect }: Props) {
   const c = session.input.constraints;
   const remaining = c.budgetUsd - session.plan.totalCostUsd;
   const lede = items.length ? (
-    <>Investigate {joinNames(items.map((i) => i.name))} first.</>
+    <>Investigate <em>{joinNames(items.map((i) => i.name))}</em> first.</>
   ) : (
     <>No market can be recommended yet.</>
   );
@@ -47,17 +47,17 @@ export function StrategySummary({ session, stats, onInspect }: Props) {
         </ol>
       )}
 
-      <p className={`mt-5 flex items-start gap-2 text-sm ${session.violations.length ? "text-rose" : "text-ok"}`}>
+      <p className={`mt-5 flex items-start gap-2 text-sm ${session.violations.length ? "text-removed-ink" : "text-success"}`}>
         <span aria-hidden>{session.violations.length ? "!" : "✓"}</span>
         {session.violations.length ? `Constraint violations: ${session.violations.join("; ")}` : "Independent check passed — budget, market cap, exclusions and subtitle rule recomputed outside the planner."}
       </p>
 
       <div className="mt-12 grid gap-4 lg:grid-cols-3">
-        <Panel title="Do next" tone="var(--violet)">
-          <ul className="space-y-3">{nextSteps(session).map((s) => <li key={s} className="flex gap-3"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-violet" />{s}</li>)}</ul>
+        <Panel title="Do next" tone="var(--accent)">
+          <ul className="space-y-3">{nextSteps(session).map((s) => <li key={s} className="flex gap-3"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent" />{s}</li>)}</ul>
         </Panel>
-        <Panel title="What remains uncertain" tone="var(--warm)">
-          <ul className="space-y-3">{uncertainties(session).map((s) => <li key={s} className="flex gap-3"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-warm" />{s}</li>)}</ul>
+        <Panel title="What remains uncertain" tone="var(--caution)">
+          <ul className="space-y-3">{uncertainties(session).map((s) => <li key={s} className="flex gap-3"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-caution" />{s}</li>)}</ul>
         </Panel>
         <QlooPanel session={session} stats={stats} />
       </div>
@@ -86,7 +86,7 @@ function QlooPanel({ session, stats }: { session: Session; stats: CallStats | nu
   ];
   return (
     <div className="panel p-6">
-      <p className="eyebrow text-teal">What Qloo contributes</p>
+      <p className="eyebrow text-evidence">What Qloo contributes</p>
       <p className="mt-4 text-sm leading-relaxed text-bone-dim">Qloo&apos;s taste graph supplies the cultural neighbourhood of your comps in each country. Territory&apos;s planner — deterministic, no AI arithmetic — turns it into a budgeted plan.</p>
       <dl className="mt-4 divide-y divide-line text-sm">
         {rows.map(([k, v]) => (

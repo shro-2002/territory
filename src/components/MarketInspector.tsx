@@ -21,10 +21,10 @@ function verdict(session: Session, code: string): { label: string; tone: string;
   const decision = session.plan.markets.find((m) => m.code === code);
   const excluded = session.plan.excluded.find((e) => e.code === code);
   const r = session.research[code];
-  if (decision) return { label: "In your plan", tone: "var(--violet)", why: `Selected — ${formatLabel(decision.mode, decision.language)}.` };
-  if (excluded) return { label: "Excluded", tone: "var(--rose)", why: excludedReason(excluded.reason) };
-  if (r?.score === null) return { label: "Insufficient evidence", tone: "var(--warm)", why: r.insufficientReason ?? "Too little overlapping data." };
-  if (r) return { label: "Researched, not selected", tone: "var(--teal)", why: "Other markets add more value within your market cap and budget." };
+  if (decision) return { label: "In your plan", tone: "var(--accent)", why: `Selected — ${formatLabel(decision.mode, decision.language)}.` };
+  if (excluded) return { label: "Excluded", tone: "var(--removed-ink)", why: excludedReason(excluded.reason) };
+  if (r?.score === null) return { label: "Insufficient evidence", tone: "var(--caution)", why: r.insufficientReason ?? "Too little overlapping data." };
+  if (r) return { label: "Researched, not selected", tone: "var(--evidence)", why: "Other markets add more value within your market cap and budget." };
   return { label: "Not researched", tone: "var(--bone-faint)", why: "Territory researches a market when it is a candidate or when a revision needs a replacement." };
 }
 
@@ -52,7 +52,7 @@ export function MarketInspector({ session, code }: Props) {
           {r.scoreRange && <p className="text-xs leading-relaxed text-bone-faint">Overlap ratio {r.score.toFixed(2)}× (from {r.scoreRange[0].toFixed(2)} to {r.scoreRange[1].toFixed(2)} depending on which genre baseline is left out). Markets whose ranges overlap are not meaningfully different. This is taste overlap, not proof of buyer or audience demand.</p>}
         </div>
       )}
-      {r?.score === null && <p className="mt-5 rounded-xl border border-warm/40 bg-warm/10 p-3 text-sm text-bone">This is a gap in the evidence, not a rejection. Territory will not plan this market without more data.</p>}
+      {r?.score === null && <p className="mt-5 rounded-xl border border-caution/40 bg-caution/10 p-3 text-sm text-bone">This is a gap in the evidence, not a rejection. Territory will not plan this market without more data.</p>}
 
       {r && r.localNeighbours.length > 0 && (
         <div className="mt-5">
@@ -68,7 +68,7 @@ export function MarketInspector({ session, code }: Props) {
           <div className="mt-4 space-y-3 text-xs">
             <p className="text-bone-dim"><span className="text-bone">{r.overlap}</span> of your comps&apos; {NEIGHBOURHOOD_SIZE} closest titles stay in the top {NEIGHBOURHOOD_SIZE} when Qloo conditions on {market.name}.</p>
             <div className="grid grid-cols-[6.5rem_1fr_2.5rem] items-center gap-3">
-              <span className="text-violet">Your comps</span><Bar value={r.portability} max={Math.max(r.portability, ...Object.values(r.referencePortabilities), 0.01)} tone="var(--violet)" /><span className="text-right tabular-nums">{Math.round(r.portability * 100)}%</span>
+              <span className="text-accent">Your comps</span><Bar value={r.portability} max={Math.max(r.portability, ...Object.values(r.referencePortabilities), 0.01)} tone="var(--accent)" /><span className="text-right tabular-nums">{Math.round(r.portability * 100)}%</span>
               {REFERENCE_SETS.map((ref) => {
                 const val = r.referencePortabilities[ref.id];
                 return (

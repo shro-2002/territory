@@ -1,7 +1,7 @@
 import type { EvidenceStrength } from "@/lib/territory/view-model";
 
 const SEGMENTS: Record<EvidenceStrength, number> = { moderate: 2, low: 1, none: 0 };
-const TONE: Record<EvidenceStrength, string> = { moderate: "var(--teal)", low: "var(--warm)", none: "var(--line-2)" };
+const TONE: Record<EvidenceStrength, string> = { moderate: "var(--evidence)", low: "var(--caution)", none: "var(--line-2)" };
 const LABEL: Record<EvidenceStrength, string> = { moderate: "Moderate", low: "Low", none: "None" };
 
 /** Three-notch evidence gauge. Never fills the third notch: no market's evidence is "high". */

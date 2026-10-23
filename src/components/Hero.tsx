@@ -37,16 +37,19 @@ export function Hero({ input, source, isBusy, hasResult, progress, pendingCodes,
       <div className="absolute inset-x-0 top-0 h-svh min-h-[640px]">
         <GlobeStage candidates={input.targetMarkets} pending={pendingCodes} plan={planCodes} />
       </div>
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/55 to-transparent lg:via-ink/20" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/60 to-transparent lg:via-ink/25" />
+      {/* Title-card vignette: darkens the frame edges like a projected image. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(ellipse 120% 90% at 55% 45%, transparent 62%, var(--ink) 100%)" }} />
       <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-ink to-transparent" />
 
       <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1320px] flex-col justify-center px-4 pb-24 pt-28 sm:px-8">
         <div className="max-w-[640px]">
-          <motion.p className="eyebrow flex items-center gap-3" {...enter(0)}>
+          <motion.p className="eyebrow flex items-center gap-3 text-gold" {...enter(0)}>
+            <span aria-hidden className="h-px w-10 bg-gold/70" />
             Market strategy for independent film, built on Qloo taste data
           </motion.p>
           <motion.h1 className="display mt-6 text-[clamp(2.9rem,7.6vw,6rem)] leading-[0.98]" {...enter(1)}>
-            Find the world your film belongs to.
+            Find the <em className="text-accent">world</em> your film belongs to.
           </motion.h1>
           <motion.p className="mt-6 max-w-[34rem] text-base leading-relaxed text-bone-dim sm:text-lg" {...enter(2)}>
             Territory reads Qloo&apos;s taste graph to tell you which international markets to investigate first and which localization to fund — then re-plans the moment a distributor drops out or the budget shrinks.
@@ -64,8 +67,8 @@ export function Hero({ input, source, isBusy, hasResult, progress, pendingCodes,
 
           <div className="mt-6 min-h-6 text-sm" aria-live="polite">
             {isBusy ? (
-              <p className="flex items-center gap-3 text-teal">
-                <span className="pulse h-2 w-2 rounded-full bg-teal" />
+              <p className="flex items-center gap-3 text-evidence">
+                <span className="pulse h-2 w-2 rounded-full bg-evidence" />
                 {progress.total > 0 ? `${progress.done} of ${progress.total} markets read` : "Working"}{progress.latest ? ` · ${progress.latest}` : ""}
               </p>
             ) : !hasResult ? (
@@ -90,7 +93,7 @@ export function Hero({ input, source, isBusy, hasResult, progress, pendingCodes,
         <ol className="mt-10 grid max-w-[880px] gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
           {STEPS.map((s) => (
             <li key={s.n} className="bg-ink-2/90 p-4">
-              <span className="font-mono text-xs text-violet">{s.n}</span>
+              <span className="font-mono text-xs text-gold">{s.n}</span>
               <p className="mt-1 font-medium">{s.title}</p>
               <p className="mt-1 text-sm leading-snug text-bone-dim">{s.body}</p>
             </li>

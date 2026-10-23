@@ -23,7 +23,10 @@ export interface GlobeProps {
 
 type MarkerState = "off" | "candidate" | "pending" | "plan";
 
-const COLORS: Record<Exclude<MarkerState, "off">, string> = { candidate: "#c9ceff", pending: "#4fd6cc", plan: "#a093ff" };
+type Palette = Record<Exclude<MarkerState, "off">, string>;
+
+/** Reads a colour token from :root so the WebGL scene uses the same palette as the page. */
+const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const ARC_POINTS = 56;
 const MAX_ARCS = 10;
 const CAMERA_Z = 5.4;
@@ -48,8 +51,8 @@ void main(){
 }`;
 const GLOW_VERT = `varying vec3 vNormal; void main(){ vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 // Back faces of a slightly larger sphere: brightest where they meet the globe's edge, fading outward.
-const GLOW_FRAG = `varying vec3 vNormal; void main(){ float t = clamp(-vNormal.z / 0.5, 0.0, 1.0); float i = pow(t, 2.5) * 0.55; gl_FragColor = vec4(0.45, 0.38, 0.95, i); }`;
-const CORE_FRAG = `varying vec3 vNormal; void main(){ float rim = pow(1.0 - max(0.0, vNormal.z), 3.0); gl_FragColor = vec4(mix(vec3(0.03, 0.04, 0.09), vec3(0.3, 0.26, 0.66), rim * 0.65), 1.0); }`;
+const GLOW_FRAG = `uniform vec3 uHalo; varying vec3 vNormal; void main(){ float t = clamp(-vNormal.z / 0.5, 0.0, 1.0); float i = pow(t, 3.0) * 0.5; gl_FragColor = vec4(uHalo, i); }`;
+const CORE_FRAG = `uniform vec3 uCore; uniform vec3 uRim; varying vec3 vNormal; void main(){ float rim = pow(1.0 - max(0.0, vNormal.z), 3.5); gl_FragColor = vec4(mix(uCore, uRim, rim * 0.6), 1.0); }`;
 
 /** Circular mean of longitudes, so Tokyo and Los Angeles average to the Pacific rather than Europe. */
 function meanLng(codes: string[]): number | null {
@@ -71,7 +74,7 @@ function makeArc(a: string, b: string, color: string): Line {
   const lift = 1 + from.distanceTo(to) * 0.32;
   const mid = from.clone().add(to).multiplyScalar(0.5).normalize().multiplyScalar(lift);
   const geometry = new BufferGeometry().setFromPoints(new QuadraticBezierCurve3(from, mid, to).getPoints(ARC_POINTS - 1));
-  const material = new LineBasicMaterial({ color, transparent: true, opacity: 0.7, blending: AdditiveBlending, depthWrite: false });
+  const material = new LineBasicMaterial({ color, transparent: true, opacity: 0.45, blending: AdditiveBlending, depthWrite: false });
   return new Line(geometry, material);
 }
 
@@ -118,28 +121,29 @@ export default function HeroGlobe({ candidates, pending, plan, onUnavailable, on
     host.appendChild(renderer.domElement);
     renderer.domElement.style.cssText = "width:100%;height:100%;display:block";
 
+    const palette: Palette = { candidate: token("--globe-candidate"), pending: token("--evidence"), plan: token("--accent") };
     const scene = new Scene();
     const camera = new PerspectiveCamera(30, 1, 0.1, 20);
     camera.position.set(0, 0, CAMERA_Z);
     const globe = new Group();
     scene.add(globe);
 
-    globe.add(new Mesh(new SphereGeometry(0.985, 48, 32), new ShaderMaterial({ vertexShader: GLOW_VERT, fragmentShader: CORE_FRAG })));
+    globe.add(new Mesh(new SphereGeometry(0.985, 48, 32), new ShaderMaterial({ vertexShader: GLOW_VERT, fragmentShader: CORE_FRAG, uniforms: { uCore: { value: new Color(token("--globe-core")) }, uRim: { value: new Color(token("--globe-rim")) } } })));
     const dots = new BufferGeometry();
     dots.setAttribute("position", new BufferAttribute(landDots(compact ? 2.6 : 2), 3));
     globe.add(new Points(dots, new ShaderMaterial({
       vertexShader: DOT_VERT, fragmentShader: DOT_FRAG, transparent: true, depthWrite: false,
-      uniforms: { uColor: { value: new Color("#9fb0ff") }, uSize: { value: DOT_SIZE }, uPixelRatio: { value: pixelRatio } },
+      uniforms: { uColor: { value: new Color(token("--globe-dots")) }, uSize: { value: DOT_SIZE }, uPixelRatio: { value: pixelRatio } },
     })));
-    globe.add(new Mesh(new SphereGeometry(1.14, 48, 32), new ShaderMaterial({ vertexShader: GLOW_VERT, fragmentShader: GLOW_FRAG, side: BackSide, blending: AdditiveBlending, transparent: true, depthWrite: false })));
+    globe.add(new Mesh(new SphereGeometry(1.14, 48, 32), new ShaderMaterial({ vertexShader: GLOW_VERT, fragmentShader: GLOW_FRAG, uniforms: { uHalo: { value: new Color(token("--globe-halo")) } }, side: BackSide, blending: AdditiveBlending, transparent: true, depthWrite: false })));
 
     const markers = Object.entries(MARKET_GEO).map(([code, [lng, lat]]) => {
       const group = new Group();
       const pos = new Vector3(...toVec3(lng, lat, 1.004));
       group.position.copy(pos);
       group.lookAt(pos.clone().multiplyScalar(2));
-      const dot = new Mesh(new SphereGeometry(0.015, 12, 8), new MeshBasicMaterial({ color: COLORS.candidate }));
-      const ring = new Mesh(new RingGeometry(0.02, 0.026, 40), new MeshBasicMaterial({ color: COLORS.candidate, transparent: true, side: 2, depthWrite: false }));
+      const dot = new Mesh(new SphereGeometry(0.015, 12, 8), new MeshBasicMaterial({ color: palette.candidate }));
+      const ring = new Mesh(new RingGeometry(0.02, 0.026, 40), new MeshBasicMaterial({ color: palette.candidate, transparent: true, side: 2, depthWrite: false }));
       group.add(dot, ring);
       group.visible = false;
       globe.add(group);
@@ -157,14 +161,14 @@ export default function HeroGlobe({ candidates, pending, plan, onUnavailable, on
         m.state = sel.includes(m.code) ? "plan" : pend.includes(m.code) ? "pending" : cand.includes(m.code) ? "candidate" : "off";
         m.group.visible = m.state !== "off";
         if (m.state === "off") continue;
-        const color = COLORS[m.state];
+        const color = palette[m.state];
         (m.dot.material as MeshBasicMaterial).color.set(color);
         (m.ring.material as MeshBasicMaterial).color.set(color);
         m.dot.scale.setScalar(m.state === "plan" ? 1.7 : 1);
       }
       arcs.forEach((a) => { globe.remove(a); a.geometry.dispose(); (a.material as LineBasicMaterial).dispose(); });
       const arcCodes = sel.length >= 2 ? sel : cand;
-      arcs = arcPairs(arcCodes).map(([a, b]) => makeArc(a, b, sel.length >= 2 ? COLORS.plan : COLORS.pending));
+      arcs = arcPairs(arcCodes).map(([a, b]) => makeArc(a, b, sel.length >= 2 ? palette.plan : palette.pending));
       arcs.forEach((a) => globe.add(a));
       focusLng = meanLng(sel.length ? sel : pend.length ? pend : []);
       if (reduceMotion) draw(0);
@@ -193,12 +197,12 @@ export default function HeroGlobe({ candidates, pending, plan, onUnavailable, on
         const p = (t * 0.7 + m.phase) % 1;
         const speed = m.state === "pending" ? 1 : 0;
         m.ring.scale.setScalar(m.state === "pending" ? 0.6 + p * 2.6 : m.state === "plan" ? 1 + p * 1.6 : 1);
-        (m.ring.material as MeshBasicMaterial).opacity = m.state === "candidate" ? 0.35 : (1 - p) * (0.55 + speed * 0.3);
+        (m.ring.material as MeshBasicMaterial).opacity = m.state === "candidate" ? 0.25 : (1 - p) * (0.4 + speed * 0.25);
       }
       arcs.forEach((a, i) => {
         const p = (t * 0.32 + i * 0.17) % 1.5;
         a.geometry.setDrawRange(0, Math.max(2, Math.floor(ARC_POINTS * Math.min(1, p))));
-        (a.material as LineBasicMaterial).opacity = p > 1 ? 0.7 * (1 - (p - 1) / 0.5) : 0.7;
+        (a.material as LineBasicMaterial).opacity = p > 1 ? 0.45 * (1 - (p - 1) / 0.5) : 0.45;
       });
       renderer.render(scene, camera);
     }

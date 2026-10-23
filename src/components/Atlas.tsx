@@ -83,31 +83,33 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
 
   return (
     <figure className="relative" onPointerMove={onMove} onPointerLeave={onLeave}>
-      <div aria-hidden className="pointer-events-none absolute inset-x-[8%] bottom-[-6%] h-24 rounded-[50%] bg-violet-deep/25 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-[8%] bottom-[-6%] h-24 rounded-[50%] bg-accent-deep/25 blur-3xl" />
       <div ref={tilt} className="tilt">
         <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="h-auto w-full overflow-visible" role="group" aria-label="World map of candidate markets">
           <defs>
             <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="7" height="7" fill="#1c0f16" />
-              <line x1="0" y1="0" x2="0" y2="7" stroke="var(--rose)" strokeWidth="2" opacity="0.6" />
+              <rect width="7" height="7" fill="var(--map-excluded)" />
+              <line x1="0" y1="0" x2="0" y2="7" stroke="var(--removed)" strokeWidth="2" opacity="0.85" />
             </pattern>
             <linearGradient id="planFill" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#b8aeff" />
-              <stop offset="1" stopColor="#6c5ce7" />
+              <stop offset="0" stopColor="var(--map-selected-from)" />
+              <stop offset="1" stopColor="var(--map-selected-to)" />
             </linearGradient>
             <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="b" />
+              <feGaussianBlur stdDeviation="2.5" result="b" />
               <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
           </defs>
-          <path d={graticule} fill="none" stroke="#2a3263" strokeWidth={0.5} opacity={0.55} />
+          <path d={graticule} fill="none" stroke="var(--map-graticule)" strokeWidth={0.5} />
           {paths.map((p) => {
             const m = byIso.get(p.id);
-            if (!m) return <path key={p.key} d={p.d} fill="#151b35" stroke="#262e52" strokeWidth={0.5} />;
+            if (!m) return <path key={p.key} d={p.d} fill="var(--map-land)" stroke="var(--map-land-line)" strokeWidth={0.5} />;
             const st = status(m.code);
             const r = research[m.code];
             const fill =
-              st === "plan" ? "url(#planFill)" : st === "excluded" ? "url(#hatch)" : st === "insufficient" ? "#1d1810" : st === "scored" && r?.score != null ? `rgba(79,214,204,${0.14 + lift(r.score) * 0.42})` : st === "candidate" ? "#232b57" : "#151b35";
+              st === "plan" ? "url(#planFill)" : st === "excluded" ? "url(#hatch)" : st === "insufficient" ? "var(--map-insufficient)" : st === "scored" ? "var(--evidence)" : st === "candidate" ? "var(--map-candidate)" : "var(--map-land)";
+            // Researched markets share one hue; opacity carries the overlap ratio.
+            const fillOpacity = st === "scored" && r?.score != null ? 0.12 + lift(r.score) * 0.38 : 1;
             const clickable = st !== "none";
             const isSelected = selected === m.code;
             return (
@@ -115,8 +117,9 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
                 key={p.key}
                 d={p.d}
                 fill={fill}
+                fillOpacity={fillOpacity}
                 filter={st === "plan" ? "url(#glow)" : undefined}
-                stroke={isSelected ? "var(--bone)" : st === "plan" ? "#d7d1ff" : st === "insufficient" ? "var(--warm)" : st === "scored" ? "rgba(79,214,204,0.5)" : "#2a3050"}
+                stroke={isSelected ? "var(--bone)" : st === "plan" ? "var(--map-selected-from)" : st === "insufficient" ? "var(--caution)" : st === "scored" ? "color-mix(in oklab, var(--evidence) 50%, transparent)" : st === "excluded" ? "var(--removed)" : "var(--map-land-line)"}
                 strokeWidth={isSelected ? 2 : st === "plan" ? 1.2 : 0.7}
                 strokeDasharray={st === "insufficient" ? "3 3" : undefined}
                 className={`${clickable ? "cursor-pointer" : ""} ${pending.includes(m.code) ? "pulse" : ""} outline-none transition-[fill,stroke] duration-500 focus-visible:stroke-[var(--bone)]`}
@@ -136,24 +139,24 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
             if (!pt) return null;
             return (
               <g key={code} transform={`translate(${pt[0]} ${pt[1]})`} className="pointer-events-none">
-                <circle r={15} fill="none" stroke="var(--violet)" strokeWidth={1} opacity={0.5} />
-                <circle r={11} fill="#0a0820" stroke="#d7d1ff" strokeWidth={1.4} />
-                <text textAnchor="middle" dy="0.35em" fontSize={11} fontWeight={600} fill="#ecebf5">{i + 1}</text>
+                <circle r={15} fill="none" stroke="var(--accent)" strokeWidth={1} opacity={0.5} />
+                <circle r={11} fill="var(--map-marker-ink)" stroke="var(--map-selected-from)" strokeWidth={1.2} />
+                <text textAnchor="middle" dy="0.35em" fontSize={11} fontWeight={600} fill="var(--bone)">{i + 1}</text>
               </g>
             );
           })}
           {Object.keys(research).filter((c) => !planCodes.includes(c) && points[c] && (selected === c || research[c].score !== null)).map((code) => {
             const pt = points[code];
-            return <circle key={code} cx={pt![0]} cy={pt![1]} r={selected === code ? 4.5 : 3} fill={research[code].score === null ? "var(--warm)" : "var(--teal)"} stroke="#06070c" strokeWidth={1} className="pointer-events-none" />;
+            return <circle key={code} cx={pt![0]} cy={pt![1]} r={selected === code ? 4.5 : 3} fill={research[code].score === null ? "var(--caution)" : "var(--evidence)"} stroke="var(--ink)" strokeWidth={1} className="pointer-events-none" />;
           })}
         </svg>
       </div>
       <figcaption className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-bone-dim">
-        <Legend swatch={<span className="h-3 w-3 rounded-sm" style={{ background: "linear-gradient(135deg,#b8aeff,#6c5ce7)" }} />} label="Selected" />
-        <Legend swatch={<span className="h-3 w-3 rounded-sm bg-teal/40 ring-1 ring-teal/60" />} label="Researched" />
-        <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-warm" style={{ background: "#1d1810" }} />} label="Insufficient evidence" />
-        <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-rose/60" style={{ background: "repeating-linear-gradient(45deg,var(--rose) 0 2px,#1c0f16 2px 5px)" }} />} label="Excluded" />
-        <span className="text-bone-faint">Brighter teal = more of your comps&apos; taste carries over</span>
+        <Legend swatch={<span className="h-3 w-3 rounded-sm" style={{ background: "linear-gradient(135deg, var(--map-selected-from), var(--map-selected-to))" }} />} label="Selected" />
+        <Legend swatch={<span className="h-3 w-3 rounded-sm bg-evidence/40 ring-1 ring-evidence/60" />} label="Researched" />
+        <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-caution" style={{ background: "var(--map-insufficient)" }} />} label="Insufficient evidence" />
+        <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-removed" style={{ background: "repeating-linear-gradient(45deg, var(--removed) 0 2px, var(--map-excluded) 2px 5px)" }} />} label="Excluded" />
+        <span className="text-bone-faint">Brighter cyan = more of your comps&apos; taste carries over</span>
       </figcaption>
     </figure>
   );

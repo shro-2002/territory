@@ -16,7 +16,7 @@ export function BriefingExport({ session, onExport }: { session: Session; onExpo
           </div>
           <ol className="space-y-2" aria-label="Briefing contents">
             {SECTIONS.filter((s) => session.revisions.length > 0 || s !== "Strategy revisions").map((s, i) => (
-              <li key={s} className="flex items-center gap-4 rounded-xl border border-line bg-ink/60 px-4 py-3 text-sm"><span className="w-5 text-right text-xs tabular-nums text-violet">{i + 1}</span>{s}</li>
+              <li key={s} className="flex items-center gap-4 rounded-xl border border-line bg-ink/60 px-4 py-3 text-sm"><span className="w-5 text-right text-xs tabular-nums text-gold">{i + 1}</span>{s}</li>
             ))}
           </ol>
         </div>

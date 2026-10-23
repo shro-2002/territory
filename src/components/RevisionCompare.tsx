@@ -14,16 +14,16 @@ export interface HistoryEntry {
 }
 
 const DRIVER: Record<ChangeDriver, { label: string; color: string }> = {
-  "cultural-evidence": { label: "Qloo evidence", color: "var(--teal)" },
-  cost: { label: "Cost", color: "var(--warm)" },
-  constraint: { label: "Your constraint", color: "var(--violet)" },
+  "cultural-evidence": { label: "Qloo evidence", color: "var(--evidence)" },
+  cost: { label: "Cost", color: "var(--caution)" },
+  constraint: { label: "Your constraint", color: "var(--accent)" },
 };
 
 const ROW_TONE: Record<RowChange, { color: string; tag: string }> = {
   kept: { color: "var(--bone)", tag: "" },
-  added: { color: "var(--teal)", tag: "New" },
-  changed: { color: "var(--violet)", tag: "Changed" },
-  dropped: { color: "var(--rose)", tag: "Removed" },
+  added: { color: "var(--evidence)", tag: "New" },
+  changed: { color: "var(--accent)", tag: "Changed" },
+  dropped: { color: "var(--removed-ink)", tag: "Removed" },
 };
 
 type Props = { history: HistoryEntry[] };
@@ -46,13 +46,13 @@ export function RevisionCompare({ history }: Props) {
     <div ref={root} className="mt-10 scroll-mt-24" aria-label="Strategy revision">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow text-violet">Revision v{base.session.version} → v{current.session.version}</p>
+          <p className="eyebrow text-accent">Revision v{base.session.version} → v{current.session.version}</p>
           <h3 className="display mt-2 text-4xl leading-tight">{current.label}</h3>
         </div>
         {history.length > 2 && (
           <div role="group" aria-label="Compare against" className="flex gap-1 rounded-full border border-line p-1">
             {(["previous", "original"] as const).map((k) => (
-              <button key={k} type="button" aria-pressed={against === k} onClick={() => setAgainst(k)} className={`rounded-full px-4 py-2 text-xs ${against === k ? "bg-violet/20 text-bone" : "text-bone-dim hover:text-bone"}`}>
+              <button key={k} type="button" aria-pressed={against === k} onClick={() => setAgainst(k)} className={`rounded-full px-4 py-2 text-xs ${against === k ? "bg-accent/20 text-bone" : "text-bone-dim hover:text-bone"}`}>
                 vs {k === "previous" ? `v${history.at(-2)!.session.version}` : "original v1"}
               </button>
             ))}
@@ -62,13 +62,13 @@ export function RevisionCompare({ history }: Props) {
 
       <div className="mt-6 grid items-stretch gap-4 lg:grid-cols-[1fr_auto_1fr]">
         <StrategyColumn title={`${against === "original" ? "Original" : "Previous"} strategy · v${base.session.version}`} session={base.session} rows={rows} side="before" />
-        <div aria-hidden className="hidden items-center text-3xl text-violet lg:flex">→</div>
+        <div aria-hidden className="hidden items-center text-3xl text-accent lg:flex">→</div>
         <StrategyColumn title={`Revised strategy · v${current.session.version}`} session={current.session} rows={rows} side="after" accent />
       </div>
 
       <dl className="mt-6 grid gap-4 md:grid-cols-2">
         <div className="panel p-6">
-          <dt className="eyebrow text-violet">Why the decision changed</dt>
+          <dt className="eyebrow text-accent">Why the decision changed</dt>
           <dd className="mt-4">
             <ul className="space-y-3">
               {rev.changes.map((ch) => (
@@ -82,11 +82,11 @@ export function RevisionCompare({ history }: Props) {
           </dd>
         </div>
         <div className="panel p-6">
-          <dt className="eyebrow text-teal">What evidence was reused — and what was researched again</dt>
+          <dt className="eyebrow text-evidence">What evidence was reused — and what was researched again</dt>
           <dd className="mt-4">
             <div className="grid grid-cols-2 gap-4">
-              <Stat value={stats.reused} label="markets’ evidence reused, no new Qloo requests" tone="var(--teal)" />
-              <Stat value={stats.newlyResearched} label={stats.newlyResearched ? "markets researched again" : "markets needed new research"} tone="var(--violet)" />
+              <Stat value={stats.reused} label="markets’ evidence reused, no new Qloo requests" tone="var(--evidence)" />
+              <Stat value={stats.newlyResearched} label={stats.newlyResearched ? "markets researched again" : "markets needed new research"} tone="var(--accent)" />
             </div>
             <p className="mt-4 text-sm leading-relaxed text-bone-dim">
               {stats.newlyResearched
@@ -97,7 +97,7 @@ export function RevisionCompare({ history }: Props) {
             <details className="group mt-4 border-t border-line pt-4">
               <summary className="flex items-center justify-between text-sm text-bone-dim hover:text-bone"><span>Agent reasoning</span><span aria-hidden className="transition-transform group-open:rotate-45">+</span></summary>
               <ul className="mt-3 space-y-2 text-xs text-bone-dim">
-                {rev.decisions.map((d, i) => <li key={i}><span className="font-mono text-violet">{d.action}</span> — {d.reason}</li>)}
+                {rev.decisions.map((d, i) => <li key={i}><span className="font-mono text-accent">{d.action}</span> — {d.reason}</li>)}
               </ul>
             </details>
           </dd>
@@ -112,7 +112,7 @@ function StrategyColumn({ title, session, rows, side, accent }: { title: string;
   const visible = rows.filter((r) => (side === "before" ? r.before !== null : r.after !== null));
   const budget = session.input.constraints.budgetUsd;
   return (
-    <section className={`panel p-6 ${accent ? "border-violet/50" : ""}`} style={accent ? { boxShadow: "var(--glow-violet)" } : undefined}>
+    <section className={`panel p-6 ${accent ? "border-accent/50" : ""}`} style={accent ? { boxShadow: "var(--glow-accent)" } : undefined}>
       <p className="eyebrow">{title}</p>
       <p className="mt-3 text-sm text-bone-dim"><AnimatedNumber value={session.plan.totalCostUsd} className="display text-3xl text-bone" /> of <AnimatedNumber value={budget} className="tabular-nums" /> planned</p>
       <ul className="mt-5 space-y-2">
@@ -131,7 +131,7 @@ function StrategyColumn({ title, session, rows, side, accent }: { title: string;
                 className="flex items-center justify-between gap-3 rounded-xl border border-line bg-ink/50 px-4 py-3"
                 style={{ borderColor: tone.tag ? `color-mix(in oklab, ${tone.color} 45%, transparent)` : undefined }}
               >
-                <span className={`font-medium ${side === "before" && r.change === "dropped" ? "line-through decoration-rose" : ""}`} style={{ color: tone.color }}>{r.name}</span>
+                <span className={`font-medium ${side === "before" && r.change === "dropped" ? "line-through decoration-removed" : ""}`} style={{ color: tone.color }}>{r.name}</span>
                 <span className="flex items-center gap-2 text-xs text-bone-dim">
                   {mode === "original" ? MODE_LABEL.original : `${MODE_LABEL[mode]} · ${r.language}`}
                   {tone.tag && <span className="rounded-full border px-2 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider" style={{ color: tone.color, borderColor: `color-mix(in oklab, ${tone.color} 50%, transparent)` }}>{side === "before" ? "Removed" : tone.tag}</span>}
@@ -141,7 +141,7 @@ function StrategyColumn({ title, session, rows, side, accent }: { title: string;
           })}
         </AnimatePresence>
       </ul>
-      {visible.length === 0 && <p className="mt-5 text-sm text-rose">No market satisfies these constraints with sufficient evidence.</p>}
+      {visible.length === 0 && <p className="mt-5 text-sm text-removed-ink">No market satisfies these constraints with sufficient evidence.</p>}
     </section>
   );
 }

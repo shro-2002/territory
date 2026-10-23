@@ -118,8 +118,8 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
         <Hero input={input} source={source} isBusy={busy === "run"} hasResult={Boolean(session)} progress={progress} pendingCodes={busy === "run" ? pending : []} planCodes={planCodes} onRun={() => run(input)} onEdit={() => setIsEditing(true)} />
         {(error || notice) && (
           <div className="mx-auto max-w-[1320px] px-4 sm:px-8">
-            {error && <p role="alert" className="panel border-rose/60 p-4 text-sm text-rose">{error}</p>}
-            {notice && <p role="status" className="panel border-warm/50 p-4 text-sm text-warm">{notice}</p>}
+            {error && <p role="alert" className="panel border-removed/60 p-4 text-sm text-removed-ink">{error}</p>}
+            {notice && <p role="status" className="panel border-caution/50 p-4 text-sm text-caution">{notice}</p>}
           </div>
         )}
         {session && canReplan && (
@@ -133,7 +133,7 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
         {session && !canReplan && (
           <div role="alert" className="mx-auto mt-10 max-w-[1320px] px-4 sm:px-8">
             <div className="panel p-6">
-              <p className="text-rose">Research failed for this brief, so Territory made no recommendation.</p>
+              <p className="text-removed-ink">Research failed for this brief, so Territory made no recommendation.</p>
               {session.trace.at(-1) && <p className="mt-2 text-sm text-bone-dim">{session.trace.at(-1)!.message}</p>}
               <button type="button" className="btn mt-4" onClick={() => setIsEditing(true)}>Edit film brief</button>
             </div>

@@ -65,7 +65,7 @@ function Level({ n, title, open, children }: { n: number; title: string; open?: 
   return (
     <details open={open} className="panel group p-6">
         <summary className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-4"><span className="text-sm text-violet">Level {n}</span><span className="display text-2xl sm:text-3xl">{title}</span></span>
+          <span className="flex items-center gap-4"><span className="text-sm text-accent">Level {n}</span><span className="display text-2xl sm:text-3xl">{title}</span></span>
           <span aria-hidden className="text-xl text-bone-dim transition-transform group-open:rotate-45">+</span>
         </summary>
         <div className="mt-6 border-t border-line pt-6">{children}</div>
@@ -104,7 +104,7 @@ function EvidenceDetail({ session }: { session: Session }) {
       <div>
         <p className="eyebrow mb-3">Your comparable titles, as Qloo resolved them</p>
         <ul className="flex flex-wrap gap-2">
-          {session.comps.map((c) => <li key={c.input.name} className="rounded-full border border-line-2 px-3 py-1 text-xs text-bone-dim">{c.input.name} <span className={c.status === "resolved" ? "text-ok" : "text-warm"}>· {c.status}</span></li>)}
+          {session.comps.map((c) => <li key={c.input.name} className="rounded-full border border-line-2 px-3 py-1 text-xs text-bone-dim">{c.input.name} <span className={c.status === "resolved" ? "text-success" : "text-caution"}>· {c.status}</span></li>)}
         </ul>
       </div>
       <div className="overflow-x-auto">
@@ -139,7 +139,7 @@ function EvidenceDetail({ session }: { session: Session }) {
             <li key={c.id} className="rounded-xl border border-line bg-ink/60 p-3 text-sm">
               <div className="mb-1 flex flex-wrap items-center gap-2">
                 <ProvenanceTag provenance={c.provenance} />
-                {c.source === "mock" && <span className="font-mono text-[0.62rem] text-warm">MOCK DATA</span>}
+                {c.source === "mock" && <span className="font-mono text-[0.62rem] text-caution">MOCK DATA</span>}
                 {c.callIds.length > 0 && <span className="font-mono text-[0.62rem] text-bone-faint">{c.callIds.join(" ")}</span>}
               </div>
               {c.text}
@@ -158,7 +158,7 @@ function AuditTrail({ calls, summary, trace, isRunning, startedAt, lastCalls }: 
     <div>
       <div role="tablist" className="mb-5 flex w-fit gap-1 rounded-full border border-line p-1">
         {TABS.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} type="button" onClick={() => setTab(t)} className={`rounded-full px-4 py-2 text-xs ${tab === t ? "bg-violet/20 text-bone" : "text-bone-dim hover:text-bone"}`}>{t}</button>
+          <button key={t} role="tab" aria-selected={tab === t} type="button" onClick={() => setTab(t)} className={`rounded-full px-4 py-2 text-xs ${tab === t ? "bg-accent/20 text-bone" : "text-bone-dim hover:text-bone"}`}>{t}</button>
         ))}
       </div>
       {tab === "Agent activity" && <TracePanel events={trace} isRunning={isRunning} startedAt={startedAt} lastCalls={lastCalls} />}
@@ -172,7 +172,7 @@ function AuditTrail({ calls, summary, trace, isRunning, startedAt, lastCalls }: 
                 {calls.map((c) => (
                   <tr key={c.id} className="border-t border-line align-top">
                     <td className="py-1 pr-2 text-bone-faint">{c.id}</td><td className="py-1 pr-2 text-bone-dim">{describeCall(c)}</td>
-                    <td className={`py-1 pr-2 ${c.status === 200 ? "text-ok" : "text-rose"}`}>{c.cacheHit ? "cache" : String(c.status)}</td>
+                    <td className={`py-1 pr-2 ${c.status === 200 ? "text-success" : "text-removed-ink"}`}>{c.cacheHit ? "cache" : String(c.status)}</td>
                     <td className="py-1 pr-2 text-right tabular-nums">{c.cacheHit ? "" : c.latencyMs}</td><td className="py-1 text-right tabular-nums">{c.resultCount}</td>
                   </tr>
                 ))}
@@ -210,7 +210,7 @@ function Validation({ summary }: { summary: ExperimentSummary }) {
             {summary.experiments.map((e) => (
               <li key={e.id} className="grid gap-2 sm:grid-cols-[2.5rem_6.5rem_1fr]">
                 <span className="font-mono text-bone-faint">{e.id}</span>
-                <span className={e.verdict === "pass" ? "text-ok" : e.verdict === "not_run" || e.verdict.startsWith("run") ? "text-bone-faint" : "text-rose"}>{e.verdict}</span>
+                <span className={e.verdict === "pass" ? "text-success" : e.verdict === "not_run" || e.verdict.startsWith("run") ? "text-bone-faint" : "text-removed-ink"}>{e.verdict}</span>
                 <span className="text-bone-dim">{e.hypothesis}</span>
               </li>
             ))}

@@ -8,7 +8,7 @@ import { AnimatedNumber } from "./ui/AnimatedNumber";
 import { SectionHead } from "./ui/SectionHead";
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
-const SEGMENT_COLORS = ["var(--violet)", "var(--teal)", "#84b4ff", "#e0a8ff", "#f0b27a"];
+const SEGMENT_COLORS = [1, 2, 3, 4, 5].map((n) => `var(--segment-${n})`);
 const KIND_LABEL: Record<DeferredOption["kind"], string> = { upgrade: "Not upgraded", excluded: "Left out", unselected: "Held back" };
 
 export function BudgetSection({ session }: { session: Session }) {
@@ -23,8 +23,8 @@ export function BudgetSection({ session }: { session: Session }) {
       <div className="panel p-6 sm:p-8">
         <dl className="grid gap-6 sm:grid-cols-3">
           <Figure label="Available" value={b.budget} />
-          <Figure label="Planned spend" value={b.planned} tone="var(--violet)" />
-          <Figure label="Remaining" value={b.remaining} tone={b.remaining < 0 ? "var(--rose)" : "var(--teal)"} />
+          <Figure label="Planned spend" value={b.planned} tone="var(--accent)" />
+          <Figure label="Remaining" value={b.remaining} tone={b.remaining < 0 ? "var(--removed-ink)" : "var(--evidence)"} />
         </dl>
 
         <div className="mt-8" role="img" aria-label={`${Math.round(b.usedShare * 100)}% of the budget is planned: ${b.actions.map((a) => `${a.language} ${usd(a.costUsd)}`).join(", ")}`}>

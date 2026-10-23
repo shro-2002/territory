@@ -17,8 +17,8 @@ function GlobePoster({ isHidden }: { isHidden: boolean }) {
         className="absolute right-[-18%] top-1/2 aspect-square w-[min(92vw,820px)] -translate-y-1/2 rounded-full lg:right-[2%]"
         style={{
           background:
-            "radial-gradient(circle at 36% 32%, rgba(160,147,255,0.22), rgba(11,13,22,0.9) 55%), repeating-radial-gradient(circle at 50% 50%, rgba(159,176,255,0.12) 0 1px, transparent 1px 22px)",
-          boxShadow: "0 0 120px -10px rgba(108,92,231,0.55), inset 0 0 80px rgba(6,7,12,0.9)",
+            "radial-gradient(circle at 36% 32%, color-mix(in oklab, var(--globe-rim) 55%, transparent), var(--globe-core) 58%), repeating-radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--globe-dots) 14%, transparent) 0 1px, transparent 1px 22px)",
+          boxShadow: "0 0 120px -20px color-mix(in oklab, var(--globe-halo) 60%, transparent), inset 0 0 80px var(--ink)",
         }}
       />
     </div>

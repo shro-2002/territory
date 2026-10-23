@@ -65,7 +65,7 @@ export function BriefForm({ initial, onSubmit, onCancel }: Props) {
         <legend className="mb-2 text-xs text-bone-dim">Candidate markets</legend>
         <div className="flex flex-wrap gap-1.5">
           {MARKETS.map((m) => (
-            <button key={m.code} type="button" aria-pressed={draft.targetMarkets.includes(m.code)} onClick={() => toggleMarket(m.code)} className={`rounded-full border px-2.5 py-1 text-xs ${draft.targetMarkets.includes(m.code) ? "border-violet bg-violet/15 text-bone" : "border-line-2 text-bone-dim"}`}>
+            <button key={m.code} type="button" aria-pressed={draft.targetMarkets.includes(m.code)} onClick={() => toggleMarket(m.code)} className={`rounded-full border px-2.5 py-1 text-xs ${draft.targetMarkets.includes(m.code) ? "border-accent bg-accent/15 text-bone" : "border-line-2 text-bone-dim"}`}>
               {m.name}
             </button>
           ))}
@@ -80,7 +80,7 @@ export function BriefForm({ initial, onSubmit, onCancel }: Props) {
           <input className={field} type="number" min={1} max={8} value={draft.constraints.maxMarkets} onChange={(e) => set("constraints", { ...draft.constraints, maxMarkets: Math.max(1, Math.min(8, Number(e.target.value) || 1)) })} />
         </label>
       </div>
-      {error && <p className="text-sm text-rose" role="alert">{error}</p>}
+      {error && <p className="text-sm text-removed-ink" role="alert">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" className="btn-primary">Run live research</button>
         <button type="button" className="btn" onClick={onCancel}>Cancel</button>

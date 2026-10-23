@@ -39,7 +39,7 @@ export function WarRoom({ history, isBusy, isReplanning, progressLine, onReplan 
       <div className="grid gap-4 md:grid-cols-2">
         {shock && (
           <Scenario
-            tag="Scenario 1"
+            tag="Disruption"
             title={`${shock.name}’s distributor pulls out`}
             detail={`Remove ${shock.name} from the plan and find the best replacement.`}
             disabled={isBusy}
@@ -47,7 +47,7 @@ export function WarRoom({ history, isBusy, isReplanning, progressLine, onReplan 
           />
         )}
         <Scenario
-          tag="Scenario 2"
+          tag="Disruption"
           title="Localization budget cut by 40%"
           detail={`${usd(c.budgetUsd)} becomes ${usd(cutBudget)}. Which language work survives?`}
           disabled={isBusy}
@@ -56,9 +56,9 @@ export function WarRoom({ history, isBusy, isReplanning, progressLine, onReplan 
       </div>
 
       {isReplanning && (
-        <div role="status" className="mt-6 overflow-hidden rounded-2xl border border-violet/40 bg-violet/10 p-5">
-          <p className="flex items-center gap-3 text-sm text-bone"><span className="pulse h-2 w-2 rounded-full bg-violet" />Re-planning — reusing evidence, researching only what is missing{progressLine ? ` · ${progressLine}` : ""}</p>
-          <span aria-hidden className="mt-4 block h-0.5 w-full rounded-full" style={{ background: "linear-gradient(90deg, transparent, var(--violet), transparent)", backgroundSize: "50% 100%", animation: "drift 1.6s linear infinite" }} />
+        <div role="status" className="mt-6 overflow-hidden rounded-2xl border border-accent/40 bg-accent/10 p-5">
+          <p className="flex items-center gap-3 text-sm text-bone"><span className="pulse h-2 w-2 rounded-full bg-accent" />Re-planning — reusing evidence, researching only what is missing{progressLine ? ` · ${progressLine}` : ""}</p>
+          <span aria-hidden className="mt-4 block h-0.5 w-full rounded-full" style={{ background: "linear-gradient(90deg, transparent, var(--accent), transparent)", backgroundSize: "50% 100%", animation: "drift 1.6s linear infinite" }} />
         </div>
       )}
 
@@ -92,15 +92,15 @@ export function WarRoom({ history, isBusy, isReplanning, progressLine, onReplan 
 
 function Scenario({ tag, title, detail, disabled, onRun }: { tag: string; title: string; detail: string; disabled: boolean; onRun: () => void }) {
   return (
-    <button type="button" disabled={disabled} onClick={onRun} className="panel p-7 text-left transition-colors hover:border-violet disabled:opacity-50">
-      <p className="eyebrow text-violet">{tag}</p>
+    <button type="button" disabled={disabled} onClick={onRun} className="panel p-7 text-left transition-colors hover:border-accent disabled:opacity-50">
+      <p className="eyebrow text-removed-ink">{tag}</p>
       <span className="display mt-3 block text-3xl leading-tight sm:text-4xl">{title}</span>
       <span className="mt-3 block text-sm text-bone-dim">{detail}</span>
-      <span className="mt-6 inline-flex text-sm text-violet">Run this scenario</span>
+      <span className="mt-6 inline-flex text-sm text-accent">Run this scenario</span>
     </button>
   );
 }
 
 function Restore({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled: boolean }) {
-  return <button type="button" disabled={disabled} onClick={onClick} className="rounded-full border border-rose/50 px-3 py-1.5 text-rose hover:bg-rose/10">{children} ✕</button>;
+  return <button type="button" disabled={disabled} onClick={onClick} className="rounded-full border border-removed/50 px-3 py-1.5 text-removed-ink hover:bg-removed/10">{children} ✕</button>;
 }
