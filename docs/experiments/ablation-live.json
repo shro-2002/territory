@@ -1,0 +1,289 @@
+{
+  "mode": "live",
+  "ran": "2026-10-23T10:31:56.092Z",
+  "qlooNetworkCalls": 12,
+  "design": "Same deterministic planner, cost table, constraints and validator in both conditions. Disabled = uniform score for every market (no cultural evidence). Constraint validity and arithmetic are identical by construction and are not attributed to Qloo.",
+  "rows": [
+    {
+      "scenario": "arthouse-drama",
+      "removedMarket": "DE",
+      "qloo": {
+        "status": "degraded",
+        "plan": [
+          "US",
+          "DE",
+          "ES",
+          "GB",
+          "MX"
+        ],
+        "valid": true,
+        "marketsWithScores": 9,
+        "marketsInsufficient": 0,
+        "localCompsTotal": 45,
+        "marketClaimsBackedByQlooCalls": 18,
+        "marketClaimsUnbacked": 0,
+        "afterRemoval": [
+          "US",
+          "ES",
+          "GB",
+          "AT",
+          "MX"
+        ],
+        "afterBudgetCut": [
+          "US",
+          "ES",
+          "GB",
+          "MX",
+          "AR"
+        ],
+        "reservesResearched": [
+          "AT",
+          "AR",
+          "CO"
+        ]
+      },
+      "disabled": {
+        "plan": [
+          "US",
+          "GB",
+          "ES",
+          "MX",
+          "BR"
+        ],
+        "afterRemoval": [
+          "US",
+          "GB",
+          "ES",
+          "MX",
+          "BR"
+        ],
+        "afterBudgetCut": [
+          "US",
+          "GB",
+          "ES",
+          "MX",
+          "BR"
+        ],
+        "localCompsTotal": 0,
+        "marketClaimsBackedByEvidence": 0
+      },
+      "constraintValid": {
+        "qloo": [
+          true,
+          true,
+          true
+        ],
+        "disabled": [
+          true,
+          true,
+          true
+        ]
+      },
+      "planOverlapJaccard": [
+        0.667,
+        0.667,
+        0.667
+      ],
+      "marketsChangedByCulturalEvidence": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "scenario": "crime-thriller",
+      "removedMarket": "BR",
+      "qloo": {
+        "status": "complete",
+        "plan": [
+          "US",
+          "BR",
+          "GB",
+          "ES",
+          "MX"
+        ],
+        "valid": true,
+        "marketsWithScores": 9,
+        "marketsInsufficient": 0,
+        "localCompsTotal": 45,
+        "marketClaimsBackedByQlooCalls": 18,
+        "marketClaimsUnbacked": 0,
+        "afterRemoval": [
+          "US",
+          "CO",
+          "DE",
+          "AR",
+          "GB"
+        ],
+        "afterBudgetCut": [
+          "US",
+          "CO",
+          "AR",
+          "GB",
+          "ES"
+        ],
+        "reservesResearched": [
+          "PT",
+          "AR",
+          "CO"
+        ]
+      },
+      "disabled": {
+        "plan": [
+          "US",
+          "GB",
+          "ES",
+          "MX",
+          "BR"
+        ],
+        "afterRemoval": [
+          "US",
+          "GB",
+          "ES",
+          "MX",
+          "KR"
+        ],
+        "afterBudgetCut": [
+          "US",
+          "GB",
+          "DE",
+          "ES",
+          "MX"
+        ],
+        "localCompsTotal": 0,
+        "marketClaimsBackedByEvidence": 0
+      },
+      "constraintValid": {
+        "qloo": [
+          true,
+          true,
+          true
+        ],
+        "disabled": [
+          true,
+          true,
+          true
+        ]
+      },
+      "planOverlapJaccard": [
+        1,
+        0.25,
+        0.429
+      ],
+      "marketsChangedByCulturalEvidence": [
+        0,
+        6,
+        4
+      ]
+    },
+    {
+      "scenario": "spanish-coming-of-age",
+      "removedMarket": "GB",
+      "qloo": {
+        "status": "complete",
+        "plan": [
+          "ES",
+          "MX",
+          "GB",
+          "US",
+          "FR"
+        ],
+        "valid": true,
+        "marketsWithScores": 9,
+        "marketsInsufficient": 0,
+        "localCompsTotal": 45,
+        "marketClaimsBackedByQlooCalls": 18,
+        "marketClaimsUnbacked": 0,
+        "afterRemoval": [
+          "ES",
+          "AU",
+          "AR",
+          "MX",
+          "US"
+        ],
+        "afterBudgetCut": [
+          "ES",
+          "AU",
+          "AR",
+          "MX",
+          "US"
+        ],
+        "reservesResearched": [
+          "AU",
+          "CA",
+          "AR"
+        ]
+      },
+      "disabled": {
+        "plan": [
+          "US",
+          "GB",
+          "ES",
+          "MX",
+          "BR"
+        ],
+        "afterRemoval": [
+          "US",
+          "DE",
+          "ES",
+          "MX",
+          "BR"
+        ],
+        "afterBudgetCut": [
+          "US",
+          "DE",
+          "ES",
+          "MX",
+          "BR"
+        ],
+        "localCompsTotal": 0,
+        "marketClaimsBackedByEvidence": 0
+      },
+      "constraintValid": {
+        "qloo": [
+          true,
+          true,
+          true
+        ],
+        "disabled": [
+          true,
+          true,
+          true
+        ]
+      },
+      "planOverlapJaccard": [
+        0.667,
+        0.429,
+        0.429
+      ],
+      "marketsChangedByCulturalEvidence": [
+        2,
+        4,
+        4
+      ]
+    },
+    {
+      "scenario": "cold-start-unknown-comps",
+      "qloo": {
+        "status": "failed",
+        "plan": [],
+        "valid": true,
+        "marketsWithScores": 0,
+        "marketsInsufficient": 0,
+        "localCompsTotal": 0,
+        "marketClaimsBackedByQlooCalls": 0,
+        "marketClaimsUnbacked": 0
+      },
+      "disabled": {
+        "plan": [
+          "US",
+          "GB",
+          "ES",
+          "MX",
+          "BR"
+        ]
+      },
+      "note": "Qloo condition declined (no comps resolved); the disabled condition still produces a plan with no cultural basis"
+    }
+  ]
+}

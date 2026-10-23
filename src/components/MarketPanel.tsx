@@ -45,7 +45,12 @@ export function MarketPanel({ session, code }: Props) {
         </div>
         <div className="text-right">
           <p className="font-display text-4xl text-amber tabular-nums">{r.score === null ? "—" : `${r.score.toFixed(2)}×`}</p>
-          <p className="text-[0.7rem] text-bone-faint">lift vs reference genres</p>
+          <p className="text-[0.7rem] text-bone-faint">taste-overlap lift vs reference genres</p>
+          {r.scoreRange && (
+            <p className="text-[0.7rem] text-bone-dim">
+              range {r.scoreRange[0].toFixed(2)}–{r.scoreRange[1].toFixed(2)}× · <span className={r.confidence === "low" ? "text-ember" : "text-bone"}>{r.confidence} confidence</span>
+            </p>
+          )}
         </div>
       </div>
 
@@ -64,7 +69,7 @@ export function MarketPanel({ session, code }: Props) {
               <Bar3 key={ref.id} label={ref.id} value={r.referencePortabilities[ref.id]} max={maxPortability} />
             ))}
           </div>
-          <p className="text-xs text-bone-faint">Reference genres measure how much any taste survives in this market; dividing by their mean removes market-wide effects. Ordinal signal, not audience size.</p>
+          <p className="text-xs text-bone-faint">Reference genres measure how much any taste survives in this market; dividing by their mean removes market-wide effects. The range shows the lift when each reference genre is left out. Markets whose ranges overlap are not meaningfully different. Relative cultural overlap — not audience size, box office or demand.</p>
           {r.fallback && <p className="text-xs text-bone-dim">Fallback used: {r.fallback}.</p>}
         </div>
       )}

@@ -1,0 +1,182 @@
+{
+  "mode": "live",
+  "ran": "2026-10-23T10:30:49.231Z",
+  "qlooNetworkCalls": 0,
+  "results": [
+    {
+      "id": "arthouse-drama",
+      "marketsScored": 9,
+      "marketsInsufficient": 0,
+      "zeroPortabilityReferences": 0,
+      "referencesUsed": [
+        "horror",
+        "comedy",
+        "animation",
+        "action"
+      ],
+      "leaveOneReferenceOut": [
+        {
+          "dropped": "horror",
+          "spearmanVsFull": 1,
+          "meanAbsDelta": 0.041
+        },
+        {
+          "dropped": "comedy",
+          "spearmanVsFull": 0.967,
+          "meanAbsDelta": 0.149
+        },
+        {
+          "dropped": "animation",
+          "spearmanVsFull": 0.967,
+          "meanAbsDelta": 0.214
+        },
+        {
+          "dropped": "action",
+          "spearmanVsFull": 0.983,
+          "meanAbsDelta": 0.081
+        }
+      ],
+      "truncationK50": {
+        "spearmanVsK100": 0.817
+      },
+      "costBias": {
+        "planRealCosts": [
+          "US",
+          "DE",
+          "ES",
+          "GB",
+          "MX"
+        ],
+        "planFlatCosts": [
+          "US",
+          "DE",
+          "ES",
+          "GB",
+          "FR"
+        ],
+        "originalLanguageShare": {
+          "top5ByScore": 0.4,
+          "planRealCosts": 0.4
+        }
+      }
+    },
+    {
+      "id": "crime-thriller",
+      "marketsScored": 9,
+      "marketsInsufficient": 0,
+      "zeroPortabilityReferences": 0,
+      "referencesUsed": [
+        "horror",
+        "comedy",
+        "animation",
+        "action"
+      ],
+      "leaveOneReferenceOut": [
+        {
+          "dropped": "horror",
+          "spearmanVsFull": 0.933,
+          "meanAbsDelta": 0.045
+        },
+        {
+          "dropped": "comedy",
+          "spearmanVsFull": 0.983,
+          "meanAbsDelta": 0.171
+        },
+        {
+          "dropped": "animation",
+          "spearmanVsFull": 0.879,
+          "meanAbsDelta": 0.238
+        },
+        {
+          "dropped": "action",
+          "spearmanVsFull": 0.967,
+          "meanAbsDelta": 0.096
+        }
+      ],
+      "truncationK50": {
+        "spearmanVsK100": 0.6
+      },
+      "costBias": {
+        "planRealCosts": [
+          "US",
+          "BR",
+          "GB",
+          "ES",
+          "MX"
+        ],
+        "planFlatCosts": [
+          "US",
+          "BR",
+          "DE",
+          "JP",
+          "GB"
+        ],
+        "originalLanguageShare": {
+          "top5ByScore": 0.4,
+          "planRealCosts": 0.4
+        }
+      }
+    },
+    {
+      "id": "spanish-coming-of-age",
+      "marketsScored": 9,
+      "marketsInsufficient": 0,
+      "zeroPortabilityReferences": 0,
+      "referencesUsed": [
+        "horror",
+        "comedy",
+        "animation",
+        "action"
+      ],
+      "leaveOneReferenceOut": [
+        {
+          "dropped": "horror",
+          "spearmanVsFull": 0.917,
+          "meanAbsDelta": 0.031
+        },
+        {
+          "dropped": "comedy",
+          "spearmanVsFull": 0.967,
+          "meanAbsDelta": 0.113
+        },
+        {
+          "dropped": "animation",
+          "spearmanVsFull": 0.917,
+          "meanAbsDelta": 0.156
+        },
+        {
+          "dropped": "action",
+          "spearmanVsFull": 0.783,
+          "meanAbsDelta": 0.063
+        }
+      ],
+      "truncationK50": {
+        "spearmanVsK100": 0.467
+      },
+      "costBias": {
+        "planRealCosts": [
+          "ES",
+          "MX",
+          "GB",
+          "US",
+          "FR"
+        ],
+        "planFlatCosts": [
+          "ES",
+          "MX",
+          "GB",
+          "US",
+          "FR"
+        ],
+        "originalLanguageShare": {
+          "top5ByScore": 0.4,
+          "planRealCosts": 0.4
+        }
+      }
+    },
+    {
+      "id": "cold-start-unknown-comps",
+      "skipped": "no comps resolved"
+    }
+  ]
+}

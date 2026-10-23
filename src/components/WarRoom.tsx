@@ -36,7 +36,7 @@ export function WarRoom({ session, previous, isBusy, onReplan, onSelect }: Props
           </div>
           <SpendMeter plan={session.plan} budget={c.budgetUsd} />
         </div>
-        <PlanTable plan={session.plan} onSelect={onSelect} onRemove={remove} isBusy={isBusy} />
+        <PlanTable plan={session.plan} onSelect={onSelect} onRemove={remove} isBusy={isBusy} research={session.research} />
         <p className={`mt-3 text-xs ${session.violations.length ? "text-ember" : "text-ok"}`}>
           {session.violations.length ? `Constraint violations: ${session.violations.join("; ")}` : "✓ Independent check passed — budget, market cap, exclusions and subtitle rule recomputed outside the planner."}
         </p>
@@ -110,7 +110,11 @@ function SpendMeter({ plan, budget }: { plan: Plan; budget: number }) {
   );
 }
 
-function PlanTable({ plan, onSelect, onRemove, isBusy }: { plan: Plan; onSelect: (code: string) => void; onRemove?: (code: string) => void; isBusy?: boolean }) {
+function PlanTable({ plan, onSelect, onRemove, isBusy, research }: { plan: Plan; onSelect: (code: string) => void; onRemove?: (code: string) => void; isBusy?: boolean; research: Session["research"] }) {
+  const range = (code: string) => {
+    const r = research[code]?.scoreRange;
+    return r ? <span className="ml-1 text-[0.7rem] text-bone-faint">({r[0].toFixed(2)}–{r[1].toFixed(2)})</span> : null;
+  };
   if (!plan.markets.length) return <p className="mt-4 text-sm text-ember">No market satisfies these constraints with sufficient evidence.</p>;
   const cost = new Map(plan.languages.map((l) => [l.language, l.costUsd]));
   return (
@@ -132,7 +136,7 @@ function PlanTable({ plan, onSelect, onRemove, isBusy }: { plan: Plan; onSelect:
               <button type="button" onClick={() => onSelect(m.code)} className="text-left hover:text-amber">{m.name}</button>
             </td>
             <td className="py-2 capitalize text-bone-dim">{m.mode}{m.mode !== "original" ? ` · ${m.language}` : ""}</td>
-            <td className="py-2 text-right tabular-nums text-amber">{m.score.toFixed(2)}×</td>
+            <td className="py-2 text-right tabular-nums text-amber">{m.score.toFixed(2)}×{range(m.code)}</td>
             <td className="py-2 text-right tabular-nums text-bone-dim">{m.mode === "original" ? "—" : usd(cost.get(m.language) ?? 0)}</td>
             {onRemove && (
               <td className="py-2 text-right">

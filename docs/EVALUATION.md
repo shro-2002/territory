@@ -56,6 +56,39 @@ Aggregates: `docs/experiments/e6-live.json`. Full outputs: `.private/` only.
 - Limits: one small local model, one run per prompt, no human raters, 3+1 scenarios. A frontier model may do arithmetic
   better; the cold-start behaviour is the more structural finding.
 
+## Qloo ablation — the primary necessity test (`npm run ablation`, 2026-10-23)
+
+Same four briefs, same deterministic planner, cost table, constraints and validator. **Only** Qloo cultural evidence differs:
+the disabled condition gives every market the same uninformative score, so only cost and constraints remain.
+Constraint validity and arithmetic are identical by construction (both 9/9 valid) and are **not** credited to Qloo.
+
+| Brief | Qloo-enabled plan | Qloo-disabled plan | Markets changed by evidence (initial / after removal / after cut) |
+|---|---|---|---|
+| Arthouse drama | US DE ES GB MX | US GB ES MX BR | 2 / 2 / 2 |
+| Crime thriller | US BR GB ES MX | US GB ES MX BR | 0 / 6 / 4 |
+| Spanish coming-of-age | ES MX GB US FR | US GB ES MX BR | 2 / 4 / 4 |
+| Fictional comps | declined (no evidence) | US GB ES MX BR | — |
+
+- Without Qloo the planner returns **the same plan for every film** — it cannot tell a Korean-American drama from a
+  Texas thriller. With Qloo the plans and the replacements chosen after a market is removed depend on the film.
+- Cultural specificity: per film, 45 market-specific nearby titles and 18 market claims backed by Qloo call ids; 0 unbacked
+  market claims. Disabled: none.
+- Reliability: the Qloo condition degraded honestly once (ambiguous comp) and declined once (no resolvable comps).
+- Not shown: that the Qloo-driven choices lead to better releases. No outcome data.
+
+## Scoring audit (`npm run audit-scoring`, cached data, 0 new calls)
+
+| Check | Result | Product consequence |
+|---|---|---|
+| Leave one reference genre out | ranking Spearman vs full 0.78–1.00; mean |Δ| 0.03–0.24 | Show a lift range per market; ranking stable, magnitudes approximate |
+| Truncation K=50 vs K=100 | ranking Spearman 0.47–0.82 | Order among close markets is not meaningful; UI/brief say "overlapping ranges are not meaningfully different" |
+| Missing data | 0 insufficient markets and 0 zero-portability baselines in these briefs; ≥2 baselines now required | Insufficient markets are never scored or planned |
+| Cost bias | original-language share in plan 0.4 = share in top-5 by score 0.4; flat costs change 1–2 picks in 2/3 briefs | Planner value mixes lift and cost; War Room tags each change as evidence, cost or constraint |
+| Candidate sampling | 9 fixed candidates + up to 3 reserves per revision | Results are relative to the candidate set chosen |
+| Reproducibility | uncached re-query drift 0 titles (E3) | — |
+Confidence labels are **low** (overlap < 8 or range width > 0.35) or **moderate**; never high, because the signal is untested
+against outcomes.
+
 ## 2018+ window (investigated live, `npm run year-window`)
 Location-conditioned **movie** results contained no pre-2018 titles in any variant: country or city location, `bias.trends=off`,
 `signal.location.weight=low`, classic comps (1931–1980). An explicit `filter.release_year.max=2017` with a location returned
