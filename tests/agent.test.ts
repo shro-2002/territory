@@ -71,12 +71,12 @@ describe("runAgent (mock backend, end to end)", () => {
     expect(s.research).toEqual({});
   });
 
-  it("marks every market insufficient when the API errors instead of crashing", async () => {
+  it("returns a failed session, not a crash, when Qloo insights is down", async () => {
     const broken: typeof fetch = async (url, init) => (String(url).includes("/search") ? createMockFetch()(url, init) : new Response("boom", { status: 500 }));
     const s = await runAgent(input, { client: new QlooClient({ apiKey: "k", source: "mock", fetchImpl: broken, sleep: async () => {}, maxRetries: 1 }) });
     expect(s.plan.markets).toEqual([]);
-    expect(Object.values(s.research).every((r) => r.score === null)).toBe(true);
-    expect(s.status).toBe("degraded");
+    expect(s.status).toBe("failed");
+    expect(s.trace.at(-1)?.message).toMatch(/unavailable/);
   });
 });
 
@@ -92,7 +92,9 @@ describe("replan (Distribution War Room)", () => {
     expect(rev.invalidated.some((x) => x.startsWith(target.code))).toBe(true);
     expect(rev.reusedMarkets.sort()).toEqual(Object.keys(s1.research).sort());
     expect(rev.newlyResearched.length).toBeGreaterThan(0);
-    expect(c.liveCallCount - callsBefore).toBe(rev.newlyResearched.length);
+    // Each new market costs comps + every usable reference baseline, 2 pages each; reused markets cost nothing.
+    const usableRefs = s1.context!.references.filter((r) => r.ids.length && r.globalIds.length).length;
+    expect(c.liveCallCount - callsBefore).toBe(rev.newlyResearched.length * 2 * (1 + usableRefs));
     expect(s2.plan.markets.map((m) => m.code)).not.toContain(target.code);
     expect(s2.violations).toEqual([]);
     expect(s2.trace.map((e) => e.state)).toContain("IMPACT_ANALYSIS");

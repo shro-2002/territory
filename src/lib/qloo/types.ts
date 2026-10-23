@@ -7,15 +7,16 @@ export const EntitySchema = z
   .object({
     entity_id: z.string(),
     name: z.string(),
-    types: z.array(z.string()).optional(),
-    subtype: z.string().optional(),
-    popularity: z.number().optional(),
-    properties: z.record(z.string(), z.unknown()).optional(),
+    types: z.array(z.string()).nullish(),
+    subtype: z.string().nullish(),
+    popularity: z.number().nullish(),
+    properties: z.record(z.string(), z.unknown()).nullish(),
     query: z
-      .object({ affinity: z.number().optional() })
+      .object({ affinity: z.number().nullish() })
       .passthrough()
-      .optional(),
-    tags: z.array(z.object({ tag_id: z.string().optional(), id: z.string().optional(), name: z.string().optional() }).passthrough()).optional(),
+      .nullish(),
+    // Live API returns null for missing tags/popularity, so everything beyond id+name is nullish.
+    tags: z.array(z.unknown()).nullish(),
   })
   .passthrough();
 export type Entity = z.infer<typeof EntitySchema>;

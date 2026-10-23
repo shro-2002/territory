@@ -36,10 +36,13 @@ export function marketByCode(code: string): Market {
 }
 
 /**
- * Reference panel for anchor calibration: globally distributed, widely known films from
- * several origins, so the panel is not dominated by one country's catalogue.
+ * Reference genre comp sets used as each market's portability baseline.
+ * Chosen to span tone and audience; blockbusters are excluded because their neighbourhood
+ * overlapped 0 in every market in live testing (no information as a baseline).
  */
-export const ANCHOR_TITLES = [
-  "Titanic", "Inception", "The Dark Knight", "Avatar", "The Godfather", "Interstellar", "La La Land", "Spirited Away",
-  "Parasite", "Amélie", "Life Is Beautiful", "Crouching Tiger, Hidden Dragon", "3 Idiots", "Coco", "The Intouchables", "Your Name",
+export const REFERENCE_SETS: Array<{ id: string; titles: string[] }> = [
+  { id: "horror", titles: ["Hereditary", "Get Out", "The Witch", "Midsommar"] },
+  { id: "comedy", titles: ["Bridesmaids", "Superbad", "The Hangover", "Step Brothers"] },
+  { id: "animation", titles: ["Coco", "Moana", "Zootopia", "Encanto"] },
+  { id: "action", titles: ["John Wick", "Mad Max: Fury Road", "The Raid", "Baby Driver"] },
 ];

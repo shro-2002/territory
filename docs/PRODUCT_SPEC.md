@@ -13,8 +13,8 @@ Title/working title, synopsis, genre, original language, 3–6 comps (+ optional
 per-language subtitle/dub cost assumptions, constraints (budget, max markets, excluded markets/languages, subtitle-first).
 
 ## Modules
-1. **Cultural Intelligence Atlas** — resolve comps (disambiguate), research each market with one
-   location-conditioned Qloo query, anchor-calibrated signal, thin-evidence fallback to Qloo-suggested substitute comps.
+1. **Cultural Intelligence Atlas** — resolve comps (disambiguate), research each market with location-conditioned
+   Qloo neighbourhoods, taste-portability signal vs reference genres, market-specific local comps, thin-evidence fallback to Qloo-suggested substitute comps.
 2. **Distribution War Room** — constraint changes trigger impact analysis → selective research → deterministic re-plan → independent verification → plain-language diff.
 3. **Evidence Lab** — every Qloo call (params, status, latency, cache hit), claim ledger with provenance, experiment results, Qloo vs LLM-only comparison.
 
@@ -25,6 +25,6 @@ per-language subtitle/dub cost assumptions, constraints (budget, max markets, ex
 No audience-size, box-office or revenue numbers. No raw cross-query affinity comparison. No raw Qloo data in the repo.
 No copyrighted artwork. Mock data always labelled.
 
-## Works today (mock-verified)
-Typed client, agent state machine, anchor signal, planner + independent validator, replan with reuse, claim ledger, experiment harness.
-**Not yet:** live Qloo validation, UI, LLM narration, LLM-only baseline, deployment.
+## Works today (live-verified 2026-10-23)
+Typed client, agent state machine, portability signal, planner + independent validator, replan with reuse, claim ledger, experiment harness.
+**Not yet:** UI, LLM narration, LLM-only baseline, deployment.

@@ -10,3 +10,8 @@
 | 2026-10-23 | No audience/demand numbers anywhere | Qloo affinity is relative taste, not demand |
 | 2026-10-23 | Negative-control mock (`--mock-ignore-location`) | Proves E2/E3 can fail, so a live pass means something |
 | 2026-10-23 | Subtitle reach = 0.7 × dub, shown as `hypothesis` | Needed for trade-offs; not empirical |
+| 2026-10-23 | **Abandon fixed anchor panel**; adopt taste portability (set overlap of comps' neighbourhood with/without location, normalized by reference genre sets in the same market) | Live: `filter.results.entities`+location returns only in-pool titles; set overlap is scale-free |
+| 2026-10-23 | Restrict all neighbourhoods to `filter.release_year.min=2018` | Live: location-conditioned results contain only 2018+ titles; old comp sets overlapped 0 |
+| 2026-10-23 | Drop blockbusters from baselines | Overlap 0 in every market; no information |
+| 2026-10-23 | Schema fields nullish; trust observed error codes over docs | Live `popularity`/`tags` null; 400 not 403 for bad type; unknown locality returns 200 |
+| 2026-10-23 | GO on country-level Territory | E1–E5 pass live; E3 Spearman 0.07 across genres shows the signal is not a country constant |

@@ -1,0 +1,332 @@
+{
+  "mode": "live",
+  "warning": "Live Qloo hackathon API. Aggregates only; raw responses are private.",
+  "started": "2026-10-23T08:11:12.655Z",
+  "finished": "2026-10-23T08:13:32.947Z",
+  "results": [
+    {
+      "id": "E1",
+      "hypothesis": "≥80% of real indie/non-English film & TV comps resolve to a Qloo entity via /search.",
+      "requests": [
+        "GET /search?query=<title>&types=urn:entity:movie,urn:entity:tv_show&take=8"
+      ],
+      "observed": {
+        "coverageOfRealTitles": 1,
+        "resolved": 17,
+        "ambiguous": 2,
+        "unresolved": 1,
+        "perTitle": [
+          {
+            "title": "Past Lives",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Minari",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Aftersun",
+            "status": "ambiguous",
+            "alternatives": 2
+          },
+          {
+            "title": "Parasite",
+            "status": "resolved",
+            "alternatives": 1
+          },
+          {
+            "title": "Drive My Car",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Portrait of a Lady on Fire",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Roma",
+            "status": "resolved",
+            "alternatives": 2
+          },
+          {
+            "title": "The Worst Person in the World",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Shoplifters",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Burning",
+            "status": "resolved",
+            "alternatives": 1
+          },
+          {
+            "title": "The Lunchbox",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Wadjda",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "A Separation",
+            "status": "resolved",
+            "alternatives": 1
+          },
+          {
+            "title": "Toni Erdmann",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Cold War",
+            "status": "resolved",
+            "alternatives": 2
+          },
+          {
+            "title": "Squid Game",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Dark",
+            "status": "resolved",
+            "alternatives": 1
+          },
+          {
+            "title": "Fleabag",
+            "status": "resolved",
+            "alternatives": 0
+          },
+          {
+            "title": "Oldboy",
+            "status": "ambiguous",
+            "alternatives": 1
+          },
+          {
+            "title": "Totally Fake Film 31337",
+            "status": "unresolved",
+            "alternatives": 3
+          }
+        ]
+      },
+      "verdict": "pass",
+      "notes": "The fake title must be unresolved; any match for it is a false positive."
+    },
+    {
+      "id": "E2",
+      "hypothesis": "Country-level signal.location.query changes the comps' taste neighbourhood (it is not ignored).",
+      "requests": [
+        "GET /v2/insights?filter.type=urn:entity:movie&signal.interests.entities=<comps>&signal.location.query=<country>&take=50&page=1..2",
+        "same without location (global)"
+      ],
+      "observed": {
+        "compsResolved": 4,
+        "globalSize": 100,
+        "marketsAccepted": 8,
+        "errors": {},
+        "meanJaccardVsGlobal": 0.077,
+        "meanPairwiseJaccard": 0.121,
+        "perMarketJaccardVsGlobal": {
+          "US": 0.111,
+          "FR": 0.081,
+          "DE": 0.111,
+          "BR": 0.058,
+          "JP": 0.064,
+          "KR": 0.064,
+          "IN": 0.026,
+          "MX": 0.105
+        }
+      },
+      "verdict": "pass",
+      "notes": "Jaccard ≈ 1 would mean location is ignored. Earlier finding: filter.results.entities + location returns only entities already in the localized pool, so fixed-panel affinity comparison is not possible."
+    },
+    {
+      "id": "E3",
+      "hypothesis": "Portability lift varies across markets, is genre-specific (two comp sets rank markets differently) and is stable on re-query.",
+      "requests": [
+        "E2 queries for comps and for 4 reference genre sets per market",
+        "second comp set (crime thrillers)",
+        "uncached re-query of US, JP, BR"
+      ],
+      "observed": {
+        "arthouse": {
+          "US": {
+            "score": 1.111,
+            "overlap": 20,
+            "baseline": 0.18
+          },
+          "FR": {
+            "score": 0.759,
+            "overlap": 15,
+            "baseline": 0.198
+          },
+          "DE": {
+            "score": 0.964,
+            "overlap": 20,
+            "baseline": 0.208
+          },
+          "BR": {
+            "score": 0.571,
+            "overlap": 11,
+            "baseline": 0.193
+          },
+          "JP": {
+            "score": 0.615,
+            "overlap": 12,
+            "baseline": 0.195
+          },
+          "KR": {
+            "score": 0.686,
+            "overlap": 12,
+            "baseline": 0.175
+          },
+          "IN": {
+            "score": 0.741,
+            "overlap": 5,
+            "baseline": 0.068
+          },
+          "MX": {
+            "score": 0.731,
+            "overlap": 19,
+            "baseline": 0.26
+          }
+        },
+        "thriller": {
+          "US": {
+            "score": 0.722,
+            "overlap": 13,
+            "baseline": 0.18
+          },
+          "FR": {
+            "score": 0.608,
+            "overlap": 12,
+            "baseline": 0.198
+          },
+          "DE": {
+            "score": 0.916,
+            "overlap": 19,
+            "baseline": 0.208
+          },
+          "BR": {
+            "score": 0.831,
+            "overlap": 16,
+            "baseline": 0.193
+          },
+          "JP": {
+            "score": 0.718,
+            "overlap": 14,
+            "baseline": 0.195
+          },
+          "KR": {
+            "score": 0.686,
+            "overlap": 12,
+            "baseline": 0.175
+          },
+          "IN": {
+            "score": 1.185,
+            "overlap": 8,
+            "baseline": 0.068
+          },
+          "MX": {
+            "score": 0.808,
+            "overlap": 21,
+            "baseline": 0.26
+          }
+        },
+        "marketsScoredBoth": 8,
+        "arthouseLiftRange": 0.54,
+        "spearmanArthouseVsThriller": 0.071,
+        "retest": {
+          "US": {
+            "first": 20,
+            "second": 20
+          },
+          "JP": {
+            "first": 12,
+            "second": 12
+          },
+          "BR": {
+            "first": 11,
+            "second": 11
+          }
+        },
+        "maxRetestDriftTitles": 0
+      },
+      "verdict": "pass",
+      "notes": "Pass needs range ≥ 0.3, Spearman < 0.9, retest drift ≤ 2 titles. A negative control (location ignored) yields portability 1.0 everywhere."
+    },
+    {
+      "id": "E4",
+      "hypothesis": "An unreleased film can be researched from comps alone: ≥2 comps resolve and Qloo returns related titles for the comp set.",
+      "requests": [
+        "GET /search per comp",
+        "GET /v2/insights?filter.type=urn:entity:movie&signal.interests.entities=<comp ids>&take=10"
+      ],
+      "observed": {
+        "immigrant family drama": {
+          "compsResolved": 3,
+          "compsRequested": 3,
+          "relatedTitlesReturned": 10
+        },
+        "nordic relationship dramedy": {
+          "compsResolved": 3,
+          "compsRequested": 3,
+          "relatedTitlesReturned": 10
+        },
+        "class-satire thriller": {
+          "compsResolved": 3,
+          "compsRequested": 3,
+          "relatedTitlesReturned": 10
+        }
+      },
+      "verdict": "pass",
+      "notes": "Related titles are the substitute-comp pool used by the agent's thin-evidence fallback."
+    },
+    {
+      "id": "E5",
+      "hypothesis": "API errors are documented and distinguishable; p95 latency allows a ~10-market run under 30 s at concurrency 4.",
+      "requests": [
+        "error-contract probes listed in observed.probes",
+        "all calls made by E1–E5"
+      ],
+      "observed": {
+        "probes": {
+          "unsupported type → expect 403": "Qloo /v2/insights returned 400: {\"errors\":[{\"message\":\"The value urn:entity:spaceship is not supported for filter.type\",",
+          "unknown locality → expect 400": "ok (20 entities)",
+          "type only, no signal → documented error": "Qloo /v2/insights returned 400: {\"errors\":[{\"message\":\"at least one valid signal or filter is required for entity insigh",
+          "free-text tag → documented error/empty": "ok (20 entities)",
+          "heatmap for comps in a country": "Qloo /v2/insights returned 400: {\"errors\":[{\"message\":\"output.heatmap.boundary must be \\\"urn:geohash\\\" or \\\"urn:entity:l"
+        },
+        "totalNetworkCalls": 111,
+        "statuses": {
+          "200": 108,
+          "400": 3
+        },
+        "latencyP50Ms": 499,
+        "latencyP95Ms": 846,
+        "cacheHits": 172
+      },
+      "verdict": "pass",
+      "notes": ""
+    },
+    {
+      "id": "E6",
+      "hypothesis": "Qloo-grounded plans differ materially from LLM-only plans for identical inputs and contain fewer unsupported claims.",
+      "requests": [
+        "LLM-only baseline with identical inputs (see docs/EVALUATION.md protocol)"
+      ],
+      "observed": {},
+      "verdict": "not_run",
+      "notes": "Requires the LLM baseline harness (Phase D). Not run; no result is claimed."
+    }
+  ]
+}

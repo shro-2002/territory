@@ -1,4 +1,5 @@
 import type { CallRecord } from "../qloo/types";
+import { NEIGHBOURHOOD_SIZE } from "../territory/market-signal";
 import { marketByCode } from "../territory/markets";
 import type { LocalizationMode, Plan } from "../territory/planner";
 import type { AgentInput, MarketResearch } from "./agent";
@@ -39,9 +40,12 @@ export function claimsFor({ input, comps, research, plan, calls, modeReach }: Cl
   }
   for (const r of Object.values(research)) {
     const name = marketByCode(r.code).name;
-    const ids = r.callId ? [r.callId] : [];
+    const ids = r.callIds;
     if (r.score === null) add(`${name}: insufficient evidence — ${r.insufficientReason}.`, "insufficient", ids);
-    else add(`${name}: the comps out-rank ${Math.round(r.score * 100)}% of the global reference panel in a ${name}-conditioned Qloo query (${r.compsFound}/${r.compsRequested} comps, ${r.anchorsFound} reference titles${r.fallback ? "; used substitute comps" : ""}). This is relative taste alignment, not audience size.`, "qloo", ids);
+    else {
+      add(`${name}: ${r.overlap} of the comps' ${NEIGHBOURHOOD_SIZE} closest titles stay in their top ${NEIGHBOURHOOD_SIZE} when Qloo conditions on ${name}; that is ${r.score.toFixed(2)}× the average of reference genres there${r.fallback ? " (after adding substitute comps)" : ""}. Relative taste alignment, not audience size.`, "qloo", ids);
+      if (r.localNeighbours.length) add(`${name}-specific titles near the comps (useful as buyer-facing local comps): ${r.localNeighbours.join(", ")}.`, "qloo", ids);
+    }
   }
   for (const l of plan.languages) add(`${l.language} ${l.mode} costs $${l.costUsd.toLocaleString("en-US")} (user cost assumption).`, "user");
   add(`Budget $${input.constraints.budgetUsd.toLocaleString("en-US")}, at most ${input.constraints.maxMarkets} markets${input.constraints.subtitleFirst ? ", subtitle-first" : ""}.`, "user");

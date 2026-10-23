@@ -1,8 +1,8 @@
 {
   "mode": "mock-ignore-location",
   "warning": "Live Qloo hackathon API. Aggregates only; raw responses are private.",
-  "started": "2026-10-22T21:32:34.607Z",
-  "finished": "2026-10-22T21:32:34.647Z",
+  "started": "2026-10-23T08:07:36.194Z",
+  "finished": "2026-10-23T08:07:36.305Z",
   "results": [
     {
       "id": "E1",
@@ -123,105 +123,146 @@
     },
     {
       "id": "E2",
-      "hypothesis": "signal.location.query at country level changes affinity ordering for a fixed set of films (it is not ignored).",
+      "hypothesis": "Country-level signal.location.query changes the comps' taste neighbourhood (it is not ignored).",
       "requests": [
-        "GET /v2/insights?filter.type=urn:entity:movie&signal.location.query=<country>&filter.results.entities=<ids>&take=50",
-        "same without signal.location.query (baseline)"
+        "GET /v2/insights?filter.type=urn:entity:movie&signal.interests.entities=<comps>&signal.location.query=<country>&take=50&page=1..2",
+        "same without location (global)"
       ],
       "observed": {
-        "marketsQueried": 8,
+        "compsResolved": 4,
+        "globalSize": 100,
         "marketsAccepted": 8,
         "errors": {},
-        "localityEcho": {
-          "US": "returned",
-          "FR": "returned",
-          "DE": "returned",
-          "BR": "returned",
-          "JP": "returned",
-          "KR": "returned",
-          "IN": "returned",
-          "MX": "returned"
-        },
-        "entitiesCompared": 19,
-        "meanPairwiseSpearman": 1,
-        "meanSpearmanVsNoLocation": 1
+        "meanJaccardVsGlobal": 1,
+        "meanPairwiseJaccard": 1,
+        "perMarketJaccardVsGlobal": {
+          "US": 1,
+          "FR": 1,
+          "DE": 1,
+          "BR": 1,
+          "JP": 1,
+          "KR": 1,
+          "IN": 1,
+          "MX": 1
+        }
       },
       "verdict": "fail",
-      "notes": "Docs' entity-type guide does not list signal.location for movie; the location use-case example does. Spearman ≈ 1 everywhere means location is ignored."
+      "notes": "Jaccard ≈ 1 would mean location is ignored. Earlier finding: filter.results.entities + location returns only entities already in the localized pool, so fixed-panel affinity comparison is not possible."
     },
     {
       "id": "E3",
-      "hypothesis": "Anchor-calibrated percentiles give a cross-market signal that varies between markets and is robust to dropping any one reference title.",
+      "hypothesis": "Portability lift varies across markets, is genre-specific (two comp sets rank markets differently) and is stable on re-query.",
       "requests": [
-        "E2 market queries reused (comps + reference panel in one call per market)"
+        "E2 queries for comps and for 4 reference genre sets per market",
+        "second comp set (crime thrillers)",
+        "uncached re-query of US, JP, BR"
       ],
       "observed": {
-        "perMarket": {
+        "arthouse": {
           "US": {
-            "score": 0.458,
-            "anchorsFound": 16,
-            "compsFound": 3,
-            "leaveOneOutSpread": 0.067
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
           },
           "FR": {
-            "score": 0.458,
-            "anchorsFound": 16,
-            "compsFound": 3,
-            "leaveOneOutSpread": 0.067
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
           },
           "DE": {
-            "score": 0.458,
-            "anchorsFound": 16,
-            "compsFound": 3,
-            "leaveOneOutSpread": 0.067
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
           },
           "BR": {
-            "score": 0.458,
-            "anchorsFound": 16,
-            "compsFound": 3,
-            "leaveOneOutSpread": 0.067
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
           },
           "JP": {
-            "score": 0.458,
-            "anchorsFound": 16,
-            "compsFound": 3,
-            "leaveOneOutSpread": 0.067
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
           },
           "KR": {
-            "score": 0.458,
-            "anchorsFound": 16,
-            "compsFound": 3,
-            "leaveOneOutSpread": 0.067
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
           },
           "IN": {
-            "score": 0.458,
-            "anchorsFound": 16,
-            "compsFound": 3,
-            "leaveOneOutSpread": 0.067
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
           },
           "MX": {
-            "score": 0.458,
-            "anchorsFound": 16,
-            "compsFound": 3,
-            "leaveOneOutSpread": 0.067
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
           }
         },
-        "maxAffinityPerQuery": [
-          1,
-          1,
-          1,
-          1,
-          1,
-          1,
-          1,
-          1
-        ],
-        "perQueryMaxIsOne": true,
-        "scoreRangeAcrossMarkets": 0,
-        "meanLeaveOneOutSpread": 0.067
+        "thriller": {
+          "US": {
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
+          },
+          "FR": {
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
+          },
+          "DE": {
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
+          },
+          "BR": {
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
+          },
+          "JP": {
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
+          },
+          "KR": {
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
+          },
+          "IN": {
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
+          },
+          "MX": {
+            "score": 1,
+            "overlap": 100,
+            "baseline": 1
+          }
+        },
+        "marketsScoredBoth": 8,
+        "arthouseLiftRange": 0,
+        "spearmanArthouseVsThriller": 1,
+        "retest": {
+          "US": {
+            "first": 100,
+            "second": 100
+          },
+          "JP": {
+            "first": 100,
+            "second": 100
+          },
+          "BR": {
+            "first": 100,
+            "second": 100
+          }
+        },
+        "maxRetestDriftTitles": 0
       },
       "verdict": "fail",
-      "notes": "If per-query max is always 1, raw affinities are normalized per query and must not be compared across markets directly."
+      "notes": "Pass needs range ≥ 0.3, Spearman < 0.9, retest drift ≤ 2 titles. A negative control (location ignored) yields portability 1.0 everywhere."
     },
     {
       "id": "E4",
@@ -259,21 +300,20 @@
       ],
       "observed": {
         "probes": {
-          "unsupported type → expect 403": "Qloo /v2/insights returned 403: {\"error\":\"Unsupported entity type\"}",
+          "unsupported type → expect 403": "Qloo /v2/insights returned 400: {\"errors\":[{\"message\":\"The value urn:entity:spaceship is not supported for filter.type\"}",
           "unknown locality → expect 400": "Qloo /v2/insights returned 400: {\"error\":\"No locality found for 'atlantis undersea republic'\"}",
-          "type only, no signal → documented error": "Qloo /v2/insights returned 400: {\"error\":\"at least one valid signal or filter is required\"}",
+          "type only, no signal → documented error": "Qloo /v2/insights returned 400: {\"errors\":[{\"message\":\"at least one valid signal or filter is required\"}]}",
           "free-text tag → documented error/empty": "ok (20 entities)",
           "heatmap for comps in a country": "ok (20 entities)"
         },
-        "totalNetworkCalls": 62,
+        "totalNetworkCalls": 104,
         "statuses": {
-          "200": 59,
-          "400": 2,
-          "403": 1
+          "200": 101,
+          "400": 3
         },
         "latencyP50Ms": 0,
         "latencyP95Ms": 1,
-        "cacheHits": 33
+        "cacheHits": 71
       },
       "verdict": "pass",
       "notes": ""

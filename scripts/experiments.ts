@@ -9,10 +9,11 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { pickCandidate } from "../src/lib/agent/resolve";
-import type { QlooClient } from "../src/lib/qloo/client";
+import { buildContext, neighbourhood, researchMarket } from "../src/lib/agent/research";
+import { MemoryCache, type QlooClient } from "../src/lib/qloo/client";
 import { createQlooClient } from "../src/lib/qloo/factory";
-import { computeMarketSignal, spearman } from "../src/lib/territory/market-signal";
-import { ANCHOR_TITLES, marketByCode } from "../src/lib/territory/markets";
+import { jaccard, portability, spearman } from "../src/lib/territory/market-signal";
+import { marketByCode } from "../src/lib/territory/markets";
 
 const negativeControl = process.argv.includes("--mock-ignore-location");
 const forceMock = negativeControl || process.argv.includes("--mock");
@@ -28,7 +29,10 @@ const E1_TITLES: Array<{ name: string; year?: number }> = [
   { name: "Cold War", year: 2018 }, { name: "Squid Game" }, { name: "Dark" }, { name: "Fleabag" }, { name: "Oldboy" }, { name: "Totally Fake Film 31337" },
 ];
 const E2_MARKETS = ["US", "FR", "DE", "BR", "JP", "KR", "IN", "MX"];
-const E2_COMPS = ["Past Lives", "Minari", "Aftersun"];
+const E2_COMPS = ["Past Lives", "Minari", "Aftersun", "Drive My Car"];
+// Second, tonally different comp set: if both rank markets identically, the signal is a market constant.
+const E3_SECOND_COMPS = ["Prisoners", "Sicario", "Gone Girl", "Zodiac"];
+const RETEST_MARKETS = ["US", "JP", "BR"];
 
 interface Result {
   id: string;
@@ -46,12 +50,6 @@ async function ids(c: QlooClient, names: string[]) {
     if (r.entityId) out[n] = r.entityId;
   }
   return out;
-}
-
-async function affinityVector(c: QlooClient, entityIds: string[], location?: string) {
-  const res = await c.insights({ "filter.type": "urn:entity:movie", ...(location ? { "signal.location.query": location } : {}), "filter.results.entities": entityIds.join(","), take: 50 });
-  const map = new Map((res.results?.entities ?? []).map((e) => [e.entity_id, e.query?.affinity]));
-  return { map, maxAffinity: Math.max(0, ...[...map.values()].filter((v): v is number => typeof v === "number")), locality: (res.query as Record<string, unknown> | undefined)?.locality };
 }
 
 async function e1(): Promise<Result> {
@@ -74,73 +72,63 @@ async function e1(): Promise<Result> {
 }
 
 async function e2(): Promise<Result> {
-  const anchorMap = await ids(client, ANCHOR_TITLES);
-  const compMap = await ids(client, E2_COMPS);
-  const all = [...new Set([...Object.values(anchorMap), ...Object.values(compMap)])];
-  const baseline = await affinityVector(client, all);
-  const vectors: Record<string, Map<string, number | undefined>> = {};
+  const compIds = Object.values(await ids(client, E2_COMPS));
+  const global = await neighbourhood(client, compIds);
+  const local: Record<string, string[]> = {};
   const errors: Record<string, string> = {};
-  const localityEcho: Record<string, unknown> = {};
   for (const code of E2_MARKETS) {
     try {
-      const v = await affinityVector(client, all, marketByCode(code).locationQuery);
-      vectors[code] = v.map;
-      localityEcho[code] = v.locality ? "returned" : "absent";
+      local[code] = (await neighbourhood(client, compIds, marketByCode(code).locationQuery)).ids;
     } catch (err) {
       errors[code] = String((err as Error).message).slice(0, 160);
     }
   }
-  const codes = Object.keys(vectors);
-  const common = all.filter((id) => codes.every((c) => typeof vectors[c].get(id) === "number") && typeof baseline.map.get(id) === "number");
+  const codes = Object.keys(local);
+  const vsGlobal = codes.map((c) => jaccard(local[c], global.ids));
   const pairs: number[] = [];
-  for (let i = 0; i < codes.length; i++) for (let j = i + 1; j < codes.length; j++) pairs.push(spearman(common.map((id) => vectors[codes[i]].get(id)!), common.map((id) => vectors[codes[j]].get(id)!)));
-  const vsBaseline = codes.map((c) => spearman(common.map((id) => vectors[c].get(id)!), common.map((id) => baseline.map.get(id)!)));
-  const meanPair = pairs.length ? mean(pairs) : NaN;
-  const meanBase = vsBaseline.length ? mean(vsBaseline) : NaN;
-  const locationSensitive = common.length >= 6 && meanPair < 0.9 && meanBase < 0.95;
+  for (let i = 0; i < codes.length; i++) for (let j = i + 1; j < codes.length; j++) pairs.push(jaccard(local[codes[i]], local[codes[j]]));
+  const sensitive = codes.length >= 4 && mean(vsGlobal) < 0.9 && mean(pairs) < 0.9;
   return {
-    id: "E2", hypothesis: "signal.location.query at country level changes affinity ordering for a fixed set of films (it is not ignored).",
-    requests: ["GET /v2/insights?filter.type=urn:entity:movie&signal.location.query=<country>&filter.results.entities=<ids>&take=50", "same without signal.location.query (baseline)"],
-    observed: { marketsQueried: E2_MARKETS.length, marketsAccepted: codes.length, errors, localityEcho, entitiesCompared: common.length, meanPairwiseSpearman: round(meanPair), meanSpearmanVsNoLocation: round(meanBase) },
-    verdict: codes.length === 0 ? "fail" : common.length < 6 ? "inconclusive" : locationSensitive ? "pass" : "fail",
-    notes: "Docs' entity-type guide does not list signal.location for movie; the location use-case example does. Spearman ≈ 1 everywhere means location is ignored.",
+    id: "E2", hypothesis: "Country-level signal.location.query changes the comps' taste neighbourhood (it is not ignored).",
+    requests: ["GET /v2/insights?filter.type=urn:entity:movie&signal.interests.entities=<comps>&signal.location.query=<country>&take=50&page=1..2", "same without location (global)"],
+    observed: { compsResolved: compIds.length, globalSize: global.ids.length, marketsAccepted: codes.length, errors, meanJaccardVsGlobal: round(mean(vsGlobal)), meanPairwiseJaccard: round(mean(pairs)), perMarketJaccardVsGlobal: Object.fromEntries(codes.map((c, i) => [c, round(vsGlobal[i])])) },
+    verdict: codes.length === 0 ? "fail" : sensitive ? "pass" : "fail",
+    notes: "Jaccard ≈ 1 would mean location is ignored. Earlier finding: filter.results.entities + location returns only entities already in the localized pool, so fixed-panel affinity comparison is not possible.",
   };
 }
 
-async function e3(): Promise<Result> {
-  const anchorMap = await ids(client, ANCHOR_TITLES);
-  const compMap = await ids(client, E2_COMPS);
-  const anchorIds = Object.values(anchorMap);
-  const compIds = Object.values(compMap);
-  const all = [...new Set([...compIds, ...anchorIds])];
-  const perMarket: Record<string, unknown> = {};
-  const maxes: number[] = [];
-  const looSpreads: number[] = [];
+async function marketScores(compNames: string[]) {
+  const ctx = await buildContext(client, Object.values(await ids(client, compNames)));
+  const out: Record<string, { score: number | null; overlap: number; baseline: number | null; reason?: string }> = {};
   for (const code of E2_MARKETS) {
-    try {
-      const v = await affinityVector(client, all, marketByCode(code).locationQuery);
-      maxes.push(v.maxAffinity);
-      const rows = [...v.map].filter(([, a]) => typeof a === "number").map(([entityId, a]) => ({ entityId, affinity: a as number }));
-      const full = computeMarketSignal(rows, compIds, anchorIds);
-      // Leave-one-anchor-out: how much does the signal depend on any single reference title?
-      const loo = anchorIds.map((_, k) => computeMarketSignal(rows, compIds, anchorIds.filter((__, i) => i !== k)).score).filter((s): s is number => s !== null);
-      const spread = loo.length ? Math.max(...loo) - Math.min(...loo) : NaN;
-      if (Number.isFinite(spread)) looSpreads.push(spread);
-      perMarket[code] = { score: full.score === null ? null : round(full.score), anchorsFound: full.anchorsFound, compsFound: full.compsFound, leaveOneOutSpread: round(spread) };
-    } catch (err) {
-      perMarket[code] = { error: String((err as Error).message).slice(0, 160) };
-    }
+    const r = await researchMarket(client, code, ctx);
+    out[code] = { score: r.score === null ? null : round(r.score), overlap: r.overlap, baseline: r.baselinePortability === null ? null : round(r.baselinePortability), reason: r.insufficientReason };
   }
-  // Test-retest on one market, bypassing nothing: the cached client returns identical data, so this
-  // checks cache determinism in-process; true API stability is measured across runs (see EVALUATION.md).
-  const scores = Object.values(perMarket).map((m) => (m as { score?: number | null }).score).filter((s): s is number => typeof s === "number");
-  const scoreRange = scores.length ? Math.max(...scores) - Math.min(...scores) : 0;
+  return { ctx, out };
+}
+
+async function e3(): Promise<Result> {
+  const a = await marketScores(E2_COMPS);
+  const b = await marketScores(E3_SECOND_COMPS);
+  const both = E2_MARKETS.filter((c) => a.out[c].score !== null && b.out[c].score !== null);
+  const rho = both.length >= 4 ? spearman(both.map((c) => a.out[c].score!), both.map((c) => b.out[c].score!)) : NaN;
+  const sa = E2_MARKETS.map((c) => a.out[c].score).filter((x): x is number => x !== null);
+  const range = sa.length ? Math.max(...sa) - Math.min(...sa) : 0;
+  // Test-retest: same queries through a fresh, uncached live client.
+  const fresh = createQlooClient({ forceMock, cache: new MemoryCache(), callBudget: 20, mock: { ignoreLocation: negativeControl } });
+  const retest: Record<string, { first: number; second: number }> = {};
+  for (const code of RETEST_MARKETS) {
+    const again = await neighbourhood(fresh, a.ctx.compIds, marketByCode(code).locationQuery);
+    retest[code] = { first: a.out[code].overlap, second: portability(a.ctx.global.ids, again.ids).overlap };
+  }
+  const maxDrift = Math.max(...Object.values(retest).map((r) => Math.abs(r.first - r.second)));
+  const pass = both.length >= 4 && range >= 0.3 && rho < 0.9 && maxDrift <= 2;
   return {
-    id: "E3", hypothesis: "Anchor-calibrated percentiles give a cross-market signal that varies between markets and is robust to dropping any one reference title.",
-    requests: ["E2 market queries reused (comps + reference panel in one call per market)"],
-    observed: { perMarket, maxAffinityPerQuery: maxes.map(round), perQueryMaxIsOne: maxes.length > 0 && maxes.every((m) => Math.abs(m - 1) < 1e-6), scoreRangeAcrossMarkets: round(scoreRange), meanLeaveOneOutSpread: round(mean(looSpreads)) },
-    verdict: scores.length < 3 ? "inconclusive" : scoreRange >= 0.15 && mean(looSpreads) <= 0.2 ? "pass" : "fail",
-    notes: "If per-query max is always 1, raw affinities are normalized per query and must not be compared across markets directly.",
+    id: "E3", hypothesis: "Portability lift varies across markets, is genre-specific (two comp sets rank markets differently) and is stable on re-query.",
+    requests: ["E2 queries for comps and for 4 reference genre sets per market", "second comp set (crime thrillers)", `uncached re-query of ${RETEST_MARKETS.join(", ")}`],
+    observed: { arthouse: a.out, thriller: b.out, marketsScoredBoth: both.length, arthouseLiftRange: round(range), spearmanArthouseVsThriller: round(rho), retest, maxRetestDriftTitles: maxDrift },
+    verdict: both.length < 4 ? "inconclusive" : pass ? "pass" : "fail",
+    notes: "Pass needs range ≥ 0.3, Spearman < 0.9, retest drift ≤ 2 titles. A negative control (location ignored) yields portability 1.0 everywhere.",
   };
 }
 
@@ -190,7 +178,7 @@ async function e5(): Promise<Result> {
     id: "E5", hypothesis: "API errors are documented and distinguishable; p95 latency allows a ~10-market run under 30 s at concurrency 4.",
     requests: ["error-contract probes listed in observed.probes", "all calls made by E1–E5"],
     observed: { probes, totalNetworkCalls: live.length, statuses, latencyP50Ms: pct(lat, 0.5), latencyP95Ms: pct(lat, 0.95), cacheHits: client.calls.length - live.length },
-    verdict: MODE === "mock" ? "inconclusive" : pct(lat, 0.95) < 6000 ? "pass" : "fail",
+    verdict: MODE === "mock" ? "inconclusive" : (pct(lat, 0.95) ?? Infinity) < 6000 ? "pass" : "fail",
     notes: MODE === "mock" ? "Mock latency is meaningless; run live." : "",
   };
 }

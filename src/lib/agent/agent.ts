@@ -1,12 +1,13 @@
 import { z } from "zod";
 
 import type { QlooClient } from "../qloo/client";
-import { QlooError } from "../qloo/types";
-import { computeMarketSignal, MarketSignal } from "../territory/market-signal";
-import { ANCHOR_TITLES, MARKETS, marketByCode } from "../territory/markets";
+import { MARKETS, marketByCode, REFERENCE_SETS } from "../territory/markets";
 import { buildPlan, Constraints, ConstraintsSchema, LanguageCostSchema, MODE_REACH, Plan, validatePlan } from "../territory/planner";
 import { Claim, claimsFor } from "./claims";
+import { buildContext, MarketResearch, ResearchContext, researchMarket, substituteContext } from "./research";
 import { resolveComp, ResolvedComp } from "./resolve";
+
+export type { MarketResearch } from "./research";
 
 export const AgentInputSchema = z.object({
   title: z.string().min(1).max(120),
@@ -32,19 +33,11 @@ export interface TraceEvent {
   at: number;
 }
 
-export interface MarketResearch extends MarketSignal {
-  code: string;
-  callId?: string;
-  /** Comps used for this market; differs from the run's comps after a fallback. */
-  compIds: string[];
-  fallback?: string;
-}
-
 export interface Session {
   version: number;
   input: AgentInput;
   comps: ResolvedComp[];
-  anchors: ResolvedComp[];
+  context: ResearchContext | null;
   research: Record<string, MarketResearch>;
   plan: Plan;
   violations: string[];
@@ -63,9 +56,7 @@ export interface Revision {
   changes: string[];
 }
 
-export const LIMITS = { maxQlooCalls: 80, maxReserveResearch: 3, maxFallbackMarkets: 4 } as const;
-const INSIGHTS_TAKE = 50;
-const SUBSTITUTE_COMPS = 3;
+export const LIMITS = { maxQlooCalls: 160, maxReserveResearch: 3, maxFallbackMarkets: 4 } as const;
 
 class Tracer {
   readonly events: TraceEvent[] = [];
@@ -104,67 +95,58 @@ export async function runAgent(rawInput: unknown, { client, onEvent }: AgentDeps
     return failedSession(input, comps, t);
   }
 
-  const anchors = await Promise.all(ANCHOR_TITLES.map((name) => resolveComp(client, { name })));
-  const anchorIds = anchors.filter((a) => a.status !== "unresolved").map((a) => a.entityId!);
   const markets = input.targetMarkets.filter((c) => !input.constraints.excludedMarkets.includes(c));
-  t.log("RESEARCH_PLANNING", `Reference panel: ${anchorIds.length}/${ANCHOR_TITLES.length} titles resolved. Plan: 1 location-conditioned query per market for ${markets.length} markets (${input.targetMarkets.length - markets.length} skipped as excluded).`);
+  let context: ResearchContext;
+  try {
+    context = await buildContext(client, usable.map((c) => c.entityId!));
+  } catch (err) {
+    t.log("RESEARCH_PLANNING", `Qloo research unavailable (${(err as Error).message.slice(0, 160)}). No strategy produced; retry later or open the cached showcase.`);
+    return failedSession(input, comps, t);
+  }
+  const refsOk = context.references.filter((r) => r.globalIds.length).length;
+  t.log("RESEARCH_PLANNING", `Comps' global taste neighbourhood: ${context.global.ids.length} titles. Reference genre baselines: ${refsOk}/${REFERENCE_SETS.length}. Plan: comps + baselines conditioned on each of ${markets.length} markets (${input.targetMarkets.length - markets.length} skipped as excluded).`);
+  if (context.global.ids.length === 0) {
+    t.log("FINAL_REPORT", "Qloo returned no related titles for these comps; market research is impossible. Try better-known comps.");
+    return failedSession(input, comps, t);
+  }
 
   const research: Record<string, MarketResearch> = {};
-  const compIds = usable.map((c) => c.entityId!);
-  await researchMarkets(client, markets, compIds, anchorIds, research);
+  await researchMarkets(client, markets, context, research);
   t.log("QLOO_INVESTIGATION", summarizeResearch(markets, research));
 
-  await verifyAndFallback(client, research, compIds, anchorIds, t);
+  await verifyAndFallback(client, research, context, t);
 
-  return finish(input, comps, anchors, research, t, client, []);
+  return finish(input, comps, context, research, t, client, []);
 }
 
-async function researchMarkets(client: QlooClient, codes: string[], compIds: string[], anchorIds: string[], into: Record<string, MarketResearch>) {
+async function researchMarkets(client: QlooClient, codes: string[], ctx: ResearchContext, into: Record<string, MarketResearch>) {
   await Promise.all(
     codes.map(async (code) => {
-      into[code] = await researchMarket(client, code, compIds, anchorIds);
+      into[code] = await researchMarket(client, code, ctx);
     }),
   );
 }
 
-async function researchMarket(client: QlooClient, code: string, compIds: string[], anchorIds: string[]): Promise<MarketResearch> {
-  const market = marketByCode(code);
-  try {
-    const res = await client.insights({
-      "filter.type": "urn:entity:movie",
-      "signal.location.query": market.locationQuery,
-      "filter.results.entities": [...new Set([...compIds, ...anchorIds])].join(","),
-      take: INSIGHTS_TAKE,
-    });
-    const rows = (res.results?.entities ?? []).filter((e) => typeof e.query?.affinity === "number").map((e) => ({ entityId: e.entity_id, affinity: e.query!.affinity! }));
-    return { code, callId: client.calls.at(-1)?.id, compIds, ...computeMarketSignal(rows, compIds, anchorIds) };
-  } catch (err) {
-    const reason = err instanceof QlooError ? `${err.code}: ${err.message}` : String(err);
-    return { code, callId: client.calls.at(-1)?.id, compIds, score: null, compsFound: 0, compsRequested: compIds.length, anchorsFound: 0, perComp: [], insufficientReason: `query failed (${reason})` };
-  }
-}
-
-/** Thin evidence → switch to Qloo-suggested substitute comps for that market, once. */
-async function verifyAndFallback(client: QlooClient, research: Record<string, MarketResearch>, compIds: string[], anchorIds: string[], t: Tracer) {
+/** Thin evidence → widen comps with the comps' closest Qloo titles and retry those markets, once. */
+async function verifyAndFallback(client: QlooClient, research: Record<string, MarketResearch>, ctx: ResearchContext, t: Tracer) {
   const thin = Object.values(research).filter((r) => r.score === null && !r.insufficientReason?.startsWith("query failed")).slice(0, LIMITS.maxFallbackMarkets);
   if (thin.length === 0) {
-    t.log("EVIDENCE_VERIFICATION", "All researched markets returned enough comps and reference titles.");
+    t.log("EVIDENCE_VERIFICATION", "Every researched market has enough overlapping titles and a reference baseline.");
     return;
   }
-  const related = await client.insights({ "filter.type": "urn:entity:movie", "signal.interests.entities": compIds.join(","), take: SUBSTITUTE_COMPS + compIds.length + anchorIds.length });
-  const substitutes = (related.results?.entities ?? []).map((e) => e.entity_id).filter((id) => !compIds.includes(id) && !anchorIds.includes(id)).slice(0, SUBSTITUTE_COMPS);
-  if (substitutes.length === 0) {
-    t.log("EVIDENCE_VERIFICATION", `${thin.map((r) => r.code).join(", ")}: insufficient evidence and Qloo suggested no substitute comps. Marked unsupported.`);
+  const widened = await substituteContext(client, ctx);
+  if (!widened) {
+    t.log("EVIDENCE_VERIFICATION", `${thin.map((r) => r.code).join(", ")}: insufficient evidence and no substitute comps available. Marked unsupported.`);
     return;
   }
   for (const r of thin) {
-    const retry = await researchMarket(client, r.code, [...compIds, ...substitutes], anchorIds);
-    research[r.code] = { ...retry, fallback: `original comps thin (${r.insufficientReason}); added ${substitutes.length} Qloo-related titles` };
+    const retry = await researchMarket(client, r.code, widened.ctx);
+    research[r.code] = { ...retry, fallback: `original comps thin (${r.insufficientReason}); added ${widened.added.join(", ")}` };
   }
-  t.log("EVIDENCE_VERIFICATION", `Thin evidence in ${thin.map((r) => r.code).join(", ")}; retried with ${substitutes.length} substitute comps from Qloo. Now: ${thin.map((r) => `${r.code} ${research[r.code].score === null ? "still insufficient" : "supported"}`).join(", ")}.`);
+  t.log("EVIDENCE_VERIFICATION", `Thin evidence in ${thin.map((r) => r.code).join(", ")}; retried with Qloo's closest titles (${widened.added.join(", ")}). Now: ${thin.map((r) => `${r.code} ${research[r.code].score === null ? "still insufficient" : "supported"}`).join(", ")}.`);
 }
 
-function finish(input: AgentInput, comps: ResolvedComp[], anchors: ResolvedComp[], research: Record<string, MarketResearch>, t: Tracer, client: QlooClient, revisions: Revision[], version = 1): Session {
+function finish(input: AgentInput, comps: ResolvedComp[], context: ResearchContext, research: Record<string, MarketResearch>, t: Tracer, client: QlooClient, revisions: Revision[], version = 1): Session {
   const candidates = Object.values(research).map((r) => ({ ...marketByCode(r.code), score: r.score }));
   const plan = buildPlan({ candidates, constraints: input.constraints, costs: input.costs, originalLanguage: input.originalLanguage });
   t.log(version === 1 ? "STRATEGY_CONSTRUCTION" : "STRATEGY_REVISION", plan.markets.length ? `Selected ${plan.markets.map((m) => `${m.code} (${m.mode})`).join(", ")} for $${plan.totalCostUsd.toLocaleString("en-US")}` : "No market satisfies the constraints with sufficient evidence.");
@@ -174,13 +156,13 @@ function finish(input: AgentInput, comps: ResolvedComp[], anchors: ResolvedComp[
   const supported = Object.values(research).filter((r) => r.score !== null).length;
   t.log("FINAL_REPORT", `${claims.length} claims: ${countBy(claims)}. ${supported}/${Object.keys(research).length} markets supported by Qloo evidence.`);
   return {
-    version, input, comps, anchors, research, plan, violations, claims, trace: t.events, revisions,
+    version, input, comps, context, research, plan, violations, claims, trace: t.events, revisions,
     status: violations.length ? "failed" : supported < Object.keys(research).length || comps.some((c) => c.status !== "resolved") ? "degraded" : "complete",
   };
 }
 
 function failedSession(input: AgentInput, comps: ResolvedComp[], t: Tracer): Session {
-  return { version: 1, input, comps, anchors: [], research: {}, plan: { markets: [], languages: [], totalCostUsd: 0, totalValue: 0, excluded: [] }, violations: [], claims: [], trace: t.events, status: "failed", revisions: [] };
+  return { version: 1, input, comps, context: null, research: {}, plan: { markets: [], languages: [], totalCostUsd: 0, totalValue: 0, excluded: [] }, violations: [], claims: [], trace: t.events, status: "failed", revisions: [] };
 }
 
 /**
@@ -208,17 +190,16 @@ export async function replan(session: Session, patch: Partial<Constraints>, { cl
   const lostSlots = session.plan.markets.filter((m) => after.excludedMarkets.includes(m.code) || (m.language !== input.originalLanguage && after.excludedLanguages.includes(m.language))).length;
   const newlyResearched: string[] = [];
   if (lostSlots > 0) {
-    const reserves = reserveMarkets(session, after);
-    const compIds = session.comps.filter((c) => c.entityId).map((c) => c.entityId!);
-    const anchorIds = session.anchors.filter((a) => a.entityId).map((a) => a.entityId!);
-    await researchMarkets(client, reserves, compIds, anchorIds, research);
+    const reserves = session.context ? reserveMarkets(session, after) : [];
+    if (session.context) await researchMarkets(client, reserves, session.context, research);
     newlyResearched.push(...reserves);
     t.log("SELECTIVE_RESEARCH", reserves.length ? `${lostSlots} planned market(s) lost; researched reserves ${reserves.join(", ")} (languages already in plan first).` : "No unresearched reserve markets remain.");
   } else {
     t.log("SELECTIVE_RESEARCH", "No planned market was removed; no new Qloo research needed.");
   }
 
-  const revised = finish(input, session.comps, session.anchors, research, t, client, session.revisions, session.version + 1);
+  if (!session.context) throw new Error("Cannot replan a session whose research failed");
+  const revised = finish(input, session.comps, session.context, research, t, client, session.revisions, session.version + 1);
   const changes = diffPlans(session.plan, revised.plan);
   const revision: Revision = { version: revised.version, constraints: after, invalidated, reusedMarkets: Object.keys(session.research), newlyResearched, changes };
   return { ...revised, trace: [...session.trace, ...revised.trace], revisions: [...session.revisions, revision] };
@@ -247,7 +228,7 @@ export function diffPlans(prev: Plan, next: Plan): string[] {
 }
 
 function summarizeResearch(codes: string[], research: Record<string, MarketResearch>) {
-  return codes.map((c) => `${c} ${research[c].score === null ? "insufficient" : research[c].score!.toFixed(2)}`).join(", ");
+  return codes.map((c) => `${c} ${research[c].score === null ? "insufficient" : `${research[c].score!.toFixed(2)}×`}`).join(", ");
 }
 
 function countBy(claims: Claim[]) {

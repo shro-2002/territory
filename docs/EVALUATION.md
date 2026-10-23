@@ -1,8 +1,8 @@
 # Evaluation
 
-## Automated tests (`npm test`) — 39 passing on 2026-10-23
+## Automated tests (`npm test`) — 40 passing on 2026-10-23
 Client: key in header not URL, GET only, retry/backoff on 429, give-up, timeout, no retry on 4xx, cache hit, call budget, concurrency cap, empty result.
-Signal: tie handling, **normalization invariance**, insufficient-evidence paths, comp/anchor overlap.
+Signal: top-K overlap, membership-only (scale-free), lift vs baseline, zero baselines ignored, thin/empty/no-baseline paths.
 Planner: budget/cap/exclusion/subtitle-first over a grid, insufficient markets never selected, shared language cost, 40% cut downgrades dubs, determinism, tamper detection.
 Agent (mock, e2e): disambiguation by year/format, unresolved comp, reproducibility, invalid input, cold start with unknown comps, API 500s → degraded not crash, replan reuse/selective research/invalidation, budget cut without new calls, subtitle-first.
 

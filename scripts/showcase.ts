@@ -6,7 +6,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { AgentInput, replan, runAgent, Session } from "../src/lib/agent/agent";
+import { AgentInput, LIMITS, replan, runAgent, Session } from "../src/lib/agent/agent";
 import { createQlooClient, PRIVATE_DIR } from "../src/lib/qloo/factory";
 
 export const SHOWCASE_INPUT: AgentInput = {
@@ -35,7 +35,7 @@ function print(label: string, s: Session) {
 }
 
 async function main() {
-  const client = createQlooClient({ forceMock: process.argv.includes("--mock"), callBudget: 80 });
+  const client = createQlooClient({ forceMock: process.argv.includes("--mock"), callBudget: LIMITS.maxQlooCalls });
   process.stdout.write(client.source === "mock" ? "MOCK DATA — not Qloo evidence\n" : "LIVE Qloo hackathon API\n");
   const s1 = await runAgent(SHOWCASE_INPUT, { client });
   print("Initial strategy", s1);

@@ -87,31 +87,46 @@ function handleSearch(p: URLSearchParams) {
   return json(200, { results: results.slice(0, take) });
 }
 
+const LIST_LENGTH = 150;
+
+/** Global neighbourhood for a seed: deterministic synthetic titles plus catalogue titles. */
+function neighbourhoodNames(seed: string): string[] {
+  return Array.from({ length: LIST_LENGTH }, (_, i) => `Related ${createHash("sha1").update(`${seed}|${i}`).digest("hex").slice(0, 6)}`);
+}
+
+/**
+ * Location conditioning, modelled on live behaviour: a market keeps a seed- and market-dependent
+ * share of the global neighbourhood and fills the rest with market-specific titles.
+ */
+function localizedNames(seed: string, loc: string): string[] {
+  const global = neighbourhoodNames(seed);
+  const keep = 0.05 + 0.3 * hash01("keep", seed, loc);
+  return global.map((n, i) => (hash01("slot", seed, loc, String(i)) < keep ? n : `${n} · ${loc}`));
+}
+
 function handleInsights(p: URLSearchParams, options: MockOptions) {
   const type = p.get("filter.type");
   if (!type) return json(400, { error: "filter.type is required" });
-  if (!SUPPORTED_TYPES.has(type)) return json(403, { error: "Unsupported entity type" });
+  if (!SUPPORTED_TYPES.has(type)) return json(400, { errors: [{ message: `The value ${type} is not supported for filter.type` }] });
   const loc = p.get("signal.location.query")?.toLowerCase();
   if (loc !== undefined && !KNOWN_LOCALITIES.includes(loc)) return json(400, { error: `No locality found for '${loc}'` });
   const hasSignal = [...p.keys()].some((k) => k.startsWith("signal.") || (k.startsWith("filter.") && k !== "filter.type"));
-  if (!hasSignal) return json(400, { error: "at least one valid signal or filter is required" });
+  if (!hasSignal) return json(400, { errors: [{ message: "at least one valid signal or filter is required" }] });
 
-  const locKey = options.ignoreLocation ? "" : (loc ?? "");
-  const seed = p.get("signal.interests.entities") ?? p.get("signal.interests.tags") ?? "";
-  const requested = p.get("filter.results.entities")?.split(",").filter(Boolean);
   const take = Math.min(Number(p.get("take") ?? 20), 50);
+  const page = Number(p.get("page") ?? 1);
+  const locKey = options.ignoreLocation ? undefined : loc;
+  const requested = p.get("filter.results.entities")?.split(",").filter(Boolean);
+  const seed = p.get("signal.interests.entities") ?? p.get("signal.interests.tags") ?? "";
 
-  const pool = requested
-    ? requested.map((id) => MOCK_CATALOG.find((n) => mockId(n) === id)).filter((n): n is string => Boolean(n))
-    : MOCK_CATALOG;
-  // Scores are normalized within this result set (max = 1), mirroring the documented per-query normalization.
-  const raw = pool.map((n) => ({ n, s: 0.2 + 0.8 * hash01("aff", n, locKey, seed) }));
-  const max = Math.max(...raw.map((r) => r.s), 1e-9);
-  const entities = raw
-    .map(({ n, s }) => entity(n, type, s / max))
-    .sort((a, b) => (b.query?.affinity ?? 0) - (a.query?.affinity ?? 0))
-    .slice(0, take);
-  return json(200, { success: true, results: { entities }, query: loc ? { locality: { signal: { name: `${MOCK_PREFIX}${loc}` } } } : {} });
+  let names: string[];
+  if (requested) names = requested.map((id) => MOCK_CATALOG.find((n) => mockId(n) === id)).filter((n): n is string => Boolean(n));
+  else if (seed) names = locKey ? localizedNames(seed, locKey) : neighbourhoodNames(seed);
+  else names = neighbourhoodNames(`location:${locKey ?? "global"}`);
+
+  // Affinity decreases with rank and is normalized within this result set, as the docs describe.
+  const entities = names.slice((page - 1) * take, page * take).map((n, i) => entity(n, type, 0.99 - 0.002 * ((page - 1) * take + i)));
+  return json(200, { success: true, results: { entities }, query: loc ? { localities: { signal: { name: `${MOCK_PREFIX}${loc}` } } } : {} });
 }
 
 export function mockEntityId(name: string) {
