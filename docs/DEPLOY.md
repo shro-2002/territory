@@ -1,6 +1,6 @@
 # Deployment
 
-Status: **prepared, not deployed.** Publishing needs explicit approval and your own host login.
+Status: **live** at https://territory-qloo.netlify.app (Netlify, production deployed 2026-10-23 with `scripts/deploy-draft.sh --prod`).
 
 ## Host decision (checked against official docs, 2026-10-23)
 

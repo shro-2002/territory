@@ -6,7 +6,7 @@ evidence still holds, what was invalidated, what new research was needed and why
 
 Built for the Qloo Agentic Hackathon 2026. Cultural evidence comes from the Qloo Taste AI™ hackathon API.
 
-**Live demo:** _to be added on publication_ · **Judge walkthrough:** [docs/JUDGE_DEMO.md](docs/JUDGE_DEMO.md)
+**Live demo:** https://territory-qloo.netlify.app (no login) · **Source:** https://github.com/shro-2002/territory · **Judge walkthrough:** [docs/JUDGE_DEMO.md](docs/JUDGE_DEMO.md)
 
 ## What it does
 1. **Brief** — title, synopsis, original language, 3–6 comparable titles, candidate markets, budget.
