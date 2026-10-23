@@ -36,6 +36,16 @@ Browser journey (showcase → Germany → cut → export): 5.7 s, 0 page errors.
 `/qloo-cache/…`, `/.env.local`, function paths 404. Not tested on the host: Redis outage (unit-tested), deadline cutoff
 (unit-tested), Netlify usage/credit numbers.
 
+## Response headers and CSP
+Every route sends `X-Frame-Options: DENY` and `Referrer-Policy: strict-origin-when-cross-origin` (plus HSTS and `nosniff` from
+the host). A Content-Security-Policy is **opt-in at build time**: `TERRITORY_CSP=report-only` or `TERRITORY_CSP=enforce`
+(next.config.ts evaluates it during the build, so set it for the build, not only the runtime). The policy allows `'self'`,
+inline scripts/styles (Next's bootstrap and streaming scripts and motion/WebGL inline styles need them; nonces would force
+fully dynamic rendering), `data:` images (film-grain SVG) and `blob:` (export download); it forbids framing, plugins and
+off-site connections. Local test (production build, full journey incl. WebGL globe, NDJSON streaming, dialog, blob export):
+zero blocked resources and zero console errors in both modes. The single violation reported, an `eval` probe inside Zod
+(`Function("")` wrapped in try/catch, falls back to the non-eval path), is benign. `e2e/csp-check.mts` repeats this check.
+
 ## Data protection & integrity (audited)
 - Key: server env only; absent from every response and client bundle (tested).
 - Browser session: HMAC-SHA256 **signed, not encrypted** — the browser can read it, so it contains only what the UI displays
