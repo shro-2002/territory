@@ -15,3 +15,8 @@
 | 2026-10-23 | Drop blockbusters from baselines | Overlap 0 in every market; no information |
 | 2026-10-23 | Schema fields nullish; trust observed error codes over docs | Live `popularity`/`tags` null; 400 not 403 for bad type; unknown locality returns 200 |
 | 2026-10-23 | GO on country-level Territory | E1–E5 pass live; E3 Spearman 0.07 across genres shows the signal is not a country constant |
+| 2026-10-23 | E6 baseline = local qwen3:14b (Ollama), no tools | No cloud LLM key; free, reproducible, offline; scored by the same validator |
+| 2026-10-23 | No LLM in the deployed product; narration comes from the claim ledger | No free hosted LLM key; ledger text is already provenance-tagged |
+| 2026-10-23 | Sessions HMAC-sealed, stateless API | Serverless without a DB; replans only run on server-produced evidence |
+| 2026-10-23 | Cache stores slimmed bodies only (586 MB → 5 MB) | Data minimisation; deployable private seed |
+| 2026-10-23 | Treat 2018+ as a hard API limit for movies | Explicit ≤2017 + location → 0 results; TV unaffected |

@@ -143,7 +143,7 @@ function Validation({ summary }: { summary: ExperimentSummary }) {
             {summary.experiments.map((e) => (
               <li key={e.id} className="grid grid-cols-[2.5rem_6.5rem_1fr] gap-2">
                 <span className="font-mono text-bone-faint">{e.id}</span>
-                <span className={e.verdict === "pass" ? "text-ok" : e.verdict === "not_run" ? "text-bone-faint" : "text-ember"}>{e.verdict}</span>
+                <span className={e.verdict === "pass" ? "text-ok" : e.verdict === "not_run" || e.verdict.startsWith("run") ? "text-bone-faint" : "text-ember"}>{e.verdict}</span>
                 <span className="text-bone-dim">{e.hypothesis}</span>
               </li>
             ))}

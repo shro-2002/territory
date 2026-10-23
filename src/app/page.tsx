@@ -28,19 +28,26 @@ function summarizeE6(raw: E6Raw | null): E6Summary | null {
     model: raw.model,
     finishedAt: raw.finishedAt,
     differentiation: raw.differentiation.top5JaccardAcrossScenarios,
-    rows: raw.scenarios.map((s) => ({
-      scenario: s.scenario,
-      territory: {
-        plans: [s.territory.initial, s.territory.afterRemoval, s.territory.afterBudgetCut].map(valid).join("/"),
-        status: String(s.territory.initial.status),
-        "qloo claims w/o call": Number(s.territory.initial.qlooClaimsWithoutCall ?? 0),
-      },
-      llm: {
-        plans: [s.llmOnly.initial, s.llmOnly.afterRemoval, s.llmOnly.afterBudgetCut].map(valid).join("/"),
-        abstained: Boolean(s.llmOnly.initial.abstained),
-        "quantitative claims": Number(s.llmOnly.initial.quantitativeClaims ?? 0),
-      },
-    })),
+    rows: raw.scenarios.map((s) => {
+      const t = [s.territory.initial, s.territory.afterRemoval, s.territory.afterBudgetCut];
+      const l = [s.llmOnly.initial, s.llmOnly.afterRemoval, s.llmOnly.afterBudgetCut];
+      const titles = s.llmOnly.initial.localCompTitlesVerified as { checked: number; foundInQloo: number } | undefined;
+      const qlooClaims = (s.territory.initial.byProvenance as Record<string, number> | undefined)?.qloo ?? 0;
+      return {
+        scenario: s.scenario,
+        territory: {
+          outcome: s.territory.initial.status === "failed" ? "declined (no evidence)" : `${t.map(valid).join("/")} plans`,
+          "Qloo-backed claims": qlooClaims,
+          "untraceable claims": Number(s.territory.initial.qlooClaimsWithoutCall ?? 0),
+        },
+        llm: {
+          outcome: s.llmOnly.initial.abstained ? "abstained" : `${l.map(valid).join("/")} plans`,
+          "wrong cost totals": `${l.filter((x) => x.costArithmeticCorrect === false).length}/3`,
+          "named local comps found in Qloo": titles ? `${titles.foundInQloo}/${titles.checked}` : "n/a",
+          "claims with checkable source": Number(s.llmOnly.initial.claimsWithCheckableSource ?? 0),
+        },
+      };
+    }),
   };
 }
 
@@ -52,7 +59,8 @@ async function loadPageData(): Promise<{ summary: ExperimentSummary; source: "li
     readJson<{ results: ExperimentSummary["yearWindow"] }>("year-window-live.json"),
   ]);
   const summary: ExperimentSummary = {
-    experiments: experiments?.results.map(({ id, verdict, hypothesis }) => ({ id, verdict, hypothesis })) ?? null,
+    // E6 runs in its own harness; reflect it here instead of the harness placeholder.
+    experiments: experiments?.results.map(({ id, verdict, hypothesis }) => ({ id, verdict: id === "E6" && e6 ? "run (below)" : verdict, hypothesis })) ?? null,
     e6: summarizeE6(e6),
     yearWindow: yearWindow?.results ?? null,
   };

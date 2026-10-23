@@ -1,0 +1,723 @@
+{
+  "mode": "live",
+  "model": "qwen3:14b",
+  "startedAt": "2026-10-23T08:42:21.635Z",
+  "finishedAt": "2026-10-23T09:16:27.727Z",
+  "note": "Aggregates only. Taste portability is relative taste alignment, not a box-office or audience forecast. LLM-only = local model with no tools, temperature 0, seed 42, single run per prompt.",
+  "scenarios": [
+    {
+      "scenario": "arthouse-drama",
+      "removedMarket": "DE",
+      "territory": {
+        "initial": {
+          "status": "degraded",
+          "markets": [
+            "US",
+            "DE",
+            "ES",
+            "GB",
+            "MX"
+          ],
+          "costUsd": 58000,
+          "violations": [],
+          "valid": true,
+          "claims": 28,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 21,
+            "user": 4,
+            "hypothesis": 2,
+            "insufficient": 1,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {
+            "KR": 0.686,
+            "JP": 0.615,
+            "US": 1.111,
+            "ES": 0.962,
+            "BR": 0.571,
+            "FR": 0.759,
+            "DE": 0.964,
+            "GB": 0.907,
+            "MX": 0.731
+          }
+        },
+        "afterRemoval": {
+          "status": "degraded",
+          "markets": [
+            "AU",
+            "US",
+            "CA",
+            "ES",
+            "GB"
+          ],
+          "costUsd": 26000,
+          "violations": [],
+          "valid": true,
+          "claims": 33,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 27,
+            "user": 3,
+            "hypothesis": 2,
+            "insufficient": 1,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {
+            "KR": 0.686,
+            "JP": 0.615,
+            "US": 1.111,
+            "ES": 0.962,
+            "BR": 0.571,
+            "FR": 0.759,
+            "DE": 0.964,
+            "GB": 0.907,
+            "MX": 0.731,
+            "CA": 1.091,
+            "AU": 1.12,
+            "AR": 0.711
+          }
+        },
+        "afterBudgetCut": {
+          "status": "degraded",
+          "markets": [
+            "AU",
+            "US",
+            "CA",
+            "ES",
+            "GB"
+          ],
+          "costUsd": 26000,
+          "violations": [],
+          "valid": true,
+          "claims": 33,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 27,
+            "user": 3,
+            "hypothesis": 2,
+            "insufficient": 1,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {
+            "KR": 0.686,
+            "JP": 0.615,
+            "US": 1.111,
+            "ES": 0.962,
+            "BR": 0.571,
+            "FR": 0.759,
+            "DE": 0.964,
+            "GB": 0.907,
+            "MX": 0.731,
+            "CA": 1.091,
+            "AU": 1.12,
+            "AR": 0.711
+          }
+        },
+        "newMarketsResearched": [
+          "AR",
+          "AU",
+          "CA"
+        ]
+      },
+      "llmOnly": {
+        "model": "qwen3:14b",
+        "initial": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "KR",
+            "JP",
+            "FR",
+            "MX",
+            "BR"
+          ],
+          "recomputedCostUsd": 18000,
+          "reportedCostUsd": 18000,
+          "costArithmeticCorrect": true,
+          "violations": [],
+          "valid": true,
+          "claims": 5,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0,
+          "localCompTitlesVerified": {
+            "checked": 12,
+            "foundInQloo": 10
+          }
+        },
+        "afterRemoval": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "KR",
+            "JP",
+            "FR",
+            "MX",
+            "BR"
+          ],
+          "recomputedCostUsd": 18000,
+          "reportedCostUsd": 18000,
+          "costArithmeticCorrect": true,
+          "violations": [],
+          "valid": true,
+          "claims": 5,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0
+        },
+        "afterBudgetCut": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "KR",
+            "JP",
+            "FR",
+            "MX",
+            "GB"
+          ],
+          "recomputedCostUsd": 15000,
+          "reportedCostUsd": 15000,
+          "costArithmeticCorrect": true,
+          "violations": [],
+          "valid": true,
+          "claims": 5,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0
+        },
+        "latencyMs": [
+          209525,
+          203647,
+          203760
+        ]
+      }
+    },
+    {
+      "scenario": "crime-thriller",
+      "removedMarket": "BR",
+      "territory": {
+        "initial": {
+          "status": "complete",
+          "markets": [
+            "US",
+            "BR",
+            "GB",
+            "ES",
+            "MX"
+          ],
+          "costUsd": 50000,
+          "violations": [],
+          "valid": true,
+          "claims": 28,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 22,
+            "user": 4,
+            "hypothesis": 1,
+            "insufficient": 1,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {
+            "US": 1.222,
+            "GB": 0.866,
+            "ES": 0.861,
+            "FR": 0.81,
+            "KR": 0.8,
+            "DE": 0.964,
+            "JP": 0.923,
+            "MX": 0.846,
+            "BR": 0.987
+          }
+        },
+        "afterRemoval": {
+          "status": "complete",
+          "markets": [
+            "US",
+            "CA",
+            "DE",
+            "AU",
+            "JP"
+          ],
+          "costUsd": 68000,
+          "violations": [],
+          "valid": true,
+          "claims": 34,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 28,
+            "user": 4,
+            "hypothesis": 1,
+            "insufficient": 1,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {
+            "US": 1.222,
+            "GB": 0.866,
+            "ES": 0.861,
+            "FR": 0.81,
+            "KR": 0.8,
+            "DE": 0.964,
+            "JP": 0.923,
+            "MX": 0.846,
+            "BR": 0.987,
+            "AU": 0.96,
+            "CA": 1.152,
+            "AR": 0.889
+          }
+        },
+        "afterBudgetCut": {
+          "status": "complete",
+          "markets": [
+            "US",
+            "CA",
+            "DE",
+            "AU",
+            "GB"
+          ],
+          "costUsd": 32000,
+          "violations": [],
+          "valid": true,
+          "claims": 33,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 28,
+            "user": 3,
+            "hypothesis": 1,
+            "insufficient": 1,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {
+            "US": 1.222,
+            "GB": 0.866,
+            "ES": 0.861,
+            "FR": 0.81,
+            "KR": 0.8,
+            "DE": 0.964,
+            "JP": 0.923,
+            "MX": 0.846,
+            "BR": 0.987,
+            "AU": 0.96,
+            "CA": 1.152,
+            "AR": 0.889
+          }
+        },
+        "newMarketsResearched": [
+          "AR",
+          "AU",
+          "CA"
+        ]
+      },
+      "llmOnly": {
+        "model": "qwen3:14b",
+        "initial": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "US",
+            "MX",
+            "BR",
+            "FR",
+            "DE"
+          ],
+          "recomputedCostUsd": 57000,
+          "reportedCostUsd": 80000,
+          "costArithmeticCorrect": false,
+          "violations": [],
+          "valid": true,
+          "claims": 3,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0,
+          "localCompTitlesVerified": {
+            "checked": 12,
+            "foundInQloo": 7
+          }
+        },
+        "afterRemoval": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "US",
+            "MX",
+            "FR",
+            "DE",
+            "KR"
+          ],
+          "recomputedCostUsd": 63000,
+          "reportedCostUsd": 80000,
+          "costArithmeticCorrect": false,
+          "violations": [],
+          "valid": true,
+          "claims": 4,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0
+        },
+        "afterBudgetCut": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "US",
+            "MX",
+            "FR",
+            "DE",
+            "KR"
+          ],
+          "recomputedCostUsd": 37000,
+          "reportedCostUsd": 48000,
+          "costArithmeticCorrect": false,
+          "violations": [],
+          "valid": true,
+          "claims": 4,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0
+        },
+        "latencyMs": [
+          183469,
+          191365,
+          149771
+        ]
+      }
+    },
+    {
+      "scenario": "spanish-coming-of-age",
+      "removedMarket": "GB",
+      "territory": {
+        "initial": {
+          "status": "complete",
+          "markets": [
+            "ES",
+            "MX",
+            "GB",
+            "US",
+            "FR"
+          ],
+          "costUsd": 60000,
+          "violations": [],
+          "valid": true,
+          "claims": 28,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 22,
+            "user": 4,
+            "hypothesis": 1,
+            "insufficient": 1,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {
+            "US": 0.611,
+            "FR": 0.608,
+            "GB": 0.619,
+            "KR": 0.514,
+            "ES": 0.759,
+            "DE": 0.578,
+            "JP": 0.513,
+            "MX": 0.654,
+            "BR": 0.571
+          }
+        },
+        "afterRemoval": {
+          "status": "complete",
+          "markets": [
+            "ES",
+            "AU",
+            "AR",
+            "MX",
+            "US"
+          ],
+          "costUsd": 28000,
+          "violations": [],
+          "valid": true,
+          "claims": 33,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 28,
+            "user": 3,
+            "hypothesis": 1,
+            "insufficient": 1,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {
+            "US": 0.611,
+            "FR": 0.608,
+            "GB": 0.619,
+            "KR": 0.514,
+            "ES": 0.759,
+            "DE": 0.578,
+            "JP": 0.513,
+            "MX": 0.654,
+            "BR": 0.571,
+            "AR": 0.711,
+            "AU": 0.72,
+            "CA": 0.606
+          }
+        },
+        "afterBudgetCut": {
+          "status": "complete",
+          "markets": [
+            "ES",
+            "AU",
+            "AR",
+            "MX",
+            "US"
+          ],
+          "costUsd": 28000,
+          "violations": [],
+          "valid": true,
+          "claims": 33,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 28,
+            "user": 3,
+            "hypothesis": 1,
+            "insufficient": 1,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {
+            "US": 0.611,
+            "FR": 0.608,
+            "GB": 0.619,
+            "KR": 0.514,
+            "ES": 0.759,
+            "DE": 0.578,
+            "JP": 0.513,
+            "MX": 0.654,
+            "BR": 0.571,
+            "AR": 0.711,
+            "AU": 0.72,
+            "CA": 0.606
+          }
+        },
+        "newMarketsResearched": [
+          "AR",
+          "AU",
+          "CA"
+        ]
+      },
+      "llmOnly": {
+        "model": "qwen3:14b",
+        "initial": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "US",
+            "GB",
+            "FR",
+            "MX",
+            "ES"
+          ],
+          "recomputedCostUsd": 6500,
+          "reportedCostUsd": 13500,
+          "costArithmeticCorrect": false,
+          "violations": [],
+          "valid": true,
+          "claims": 2,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0,
+          "localCompTitlesVerified": {
+            "checked": 12,
+            "foundInQloo": 11
+          }
+        },
+        "afterRemoval": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "US",
+            "FR",
+            "MX",
+            "ES",
+            "DE"
+          ],
+          "recomputedCostUsd": 10000,
+          "reportedCostUsd": 16500,
+          "costArithmeticCorrect": false,
+          "violations": [],
+          "valid": true,
+          "claims": 2,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0
+        },
+        "afterBudgetCut": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "US",
+            "FR",
+            "MX",
+            "ES",
+            "BR"
+          ],
+          "recomputedCostUsd": 9500,
+          "reportedCostUsd": 10500,
+          "costArithmeticCorrect": false,
+          "violations": [],
+          "valid": true,
+          "claims": 2,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0
+        },
+        "latencyMs": [
+          117340,
+          139068,
+          149473
+        ]
+      }
+    },
+    {
+      "scenario": "cold-start-unknown-comps",
+      "removedMarket": null,
+      "territory": {
+        "initial": {
+          "status": "failed",
+          "markets": [],
+          "costUsd": 0,
+          "violations": [],
+          "valid": true,
+          "claims": 0,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 0,
+            "user": 0,
+            "hypothesis": 0,
+            "insufficient": 0,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {}
+        },
+        "afterRemoval": {
+          "status": "failed",
+          "markets": [],
+          "costUsd": 0,
+          "violations": [],
+          "valid": true,
+          "claims": 0,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 0,
+            "user": 0,
+            "hypothesis": 0,
+            "insufficient": 0,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {}
+        },
+        "afterBudgetCut": {
+          "status": "failed",
+          "markets": [],
+          "costUsd": 0,
+          "violations": [],
+          "valid": true,
+          "claims": 0,
+          "qlooClaimsWithoutCall": 0,
+          "byProvenance": {
+            "qloo": 0,
+            "user": 0,
+            "hypothesis": 0,
+            "insufficient": 0,
+            "external": 0
+          },
+          "quantitativeDemandClaims": 0,
+          "marketScores": {}
+        },
+        "newMarketsResearched": []
+      },
+      "llmOnly": {
+        "model": "qwen3:14b",
+        "initial": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "FR",
+            "DE",
+            "ES",
+            "KR",
+            "JP"
+          ],
+          "recomputedCostUsd": 18500,
+          "reportedCostUsd": 17000,
+          "costArithmeticCorrect": false,
+          "violations": [],
+          "valid": true,
+          "claims": 2,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0,
+          "localCompTitlesVerified": {
+            "checked": 10,
+            "foundInQloo": 0
+          }
+        },
+        "afterRemoval": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "FR",
+            "DE",
+            "ES",
+            "KR",
+            "JP"
+          ],
+          "recomputedCostUsd": 18500,
+          "reportedCostUsd": 17000,
+          "costArithmeticCorrect": false,
+          "violations": [],
+          "valid": true,
+          "claims": 2,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0
+        },
+        "afterBudgetCut": {
+          "parsed": true,
+          "abstained": false,
+          "markets": [
+            "FR",
+            "DE",
+            "ES",
+            "KR",
+            "JP"
+          ],
+          "recomputedCostUsd": 18500,
+          "reportedCostUsd": 17000,
+          "costArithmeticCorrect": false,
+          "violations": [],
+          "valid": true,
+          "claims": 2,
+          "quantitativeClaims": 0,
+          "claimsWithCheckableSource": 0
+        },
+        "latencyMs": [
+          181326,
+          135140,
+          134016
+        ]
+      }
+    }
+  ],
+  "differentiation": {
+    "top5JaccardAcrossScenarios": {
+      "territory": {
+        "arthouse-drama~crime-thriller": 0.429,
+        "arthouse-drama~spanish-coming-of-age": 0.667,
+        "crime-thriller~spanish-coming-of-age": 0.25
+      },
+      "llmOnly": {
+        "arthouse-drama~crime-thriller": 0.429,
+        "arthouse-drama~spanish-coming-of-age": 0.25,
+        "crime-thriller~spanish-coming-of-age": 0.429
+      }
+    },
+    "territoryScoreSpearmanAcrossScenarios": {
+      "arthouse-drama~crime-thriller": 0.25,
+      "arthouse-drama~spanish-coming-of-age": 0.567,
+      "crime-thriller~spanish-coming-of-age": -0.1
+    }
+  },
+  "qlooNetworkCalls": 104
+}

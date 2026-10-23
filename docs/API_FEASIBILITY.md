@@ -1,6 +1,6 @@
 # API Feasibility (E1–E6)
 
-Status 2026-10-23 13:40 IST: **live key active. E1–E5 pass on the live hackathon API; E6 not run.**
+Status 2026-10-23 13:40 IST: **live key active. E1–E5 pass on the live hackathon API; E6 run (mixed, honest results in EVALUATION.md).**
 Country-level Territory is **GO**, with the method change and the 2018+ release-window limit below.
 Aggregates: `docs/experiments/results-live.json`. Raw responses: `.private/` only.
 
@@ -13,7 +13,8 @@ Aggregates: `docs/experiments/results-live.json`. Raw responses: `.private/` onl
    returned only the 2 already in that market's pool; without location it returned 19 with no affinity. The planned
    fixed-anchor-panel method was therefore **abandoned**.
 3. **Affinity max per query is not 1** (0.86–0.99), but values are still query-relative; we use none of them across queries.
-4. **Location-conditioned movie results only contain titles released 2018 or later** (min year 2018 in US and JP).
+4. **Location-conditioned movie results only contain titles released 2018 or later** — confirmed as an API coverage limit
+   (explicit ≤2017 filter with location → 0 results; TV shows unaffected; see EVALUATION.md).
    Global neighbourhoods of older comps (median 2013) overlapped 0. All neighbourhoods now use `filter.release_year.min=2018`.
    Product implication: evidence reflects post-2018 taste; comps may be older.
 5. **Schema:** live entities carry `popularity: null` and `tags: null`; schema made nullish (first live run failed on this).
@@ -39,7 +40,7 @@ which removes market-wide effects (data density, catalogue). `Qm \ N0` gives mar
 | E3 comparability | **pass** | arthouse lift range 0.54 (BR 0.57 – US 1.11); Spearman arthouse vs thriller across 8 markets **0.07** (genre-specific); uncached re-query drift **0 titles** |
 | E4 cold start | **pass** | 3/3 comp-only concepts: all comps resolved, 10 related titles each |
 | E5 reliability | **pass** | 111 network calls: 108×200, 3×400 (intentional probes); p50 499 ms, p95 846 ms; one 429 earlier run, retried OK |
-| E6 Qloo vs LLM | not run | — |
+| E6 Qloo vs LLM | **run** (see EVALUATION.md) | LLM-only: 9/12 wrong cost totals, planned confidently for fictional comps 3/3; Territory declined. No accuracy claim |
 
 Not yet tested: stability across days, more than 2 genre sets, TV (`urn:entity:tv_show`) neighbourhoods, markets outside the 18 listed.
 
