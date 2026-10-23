@@ -36,6 +36,8 @@ export interface QlooClientOptions {
   callBudget?: number;
   source?: "live" | "mock";
   sleep?: (ms: number) => Promise<void>;
+  /** Prefix for call ids so ids stay unique across requests that share one session. */
+  callIdPrefix?: string;
 }
 
 /** Stable query string: sorted keys, undefined dropped. Cache key and URL share it. */
@@ -69,6 +71,7 @@ export class QlooClient {
       callBudget: options.callBudget ?? DEFAULT_CALL_BUDGET,
       source: this.source,
       sleep: options.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))),
+      callIdPrefix: options.callIdPrefix ?? "q",
     };
     if (this.source === "live" && !this.opts.apiKey) {
       throw new QlooError("QLOO_API_KEY is not set; use the mock client or set the env var", "NO_KEY");
@@ -163,7 +166,7 @@ export class QlooClient {
   }
 
   private record(rec: Omit<CallRecord, "id" | "source">) {
-    this.calls.push({ ...rec, id: `q${this.calls.length + 1}`, source: this.source });
+    this.calls.push({ ...rec, id: `${this.opts.callIdPrefix}${this.calls.length + 1}`, source: this.source });
   }
 }
 

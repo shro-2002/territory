@@ -1,0 +1,72 @@
+{
+  "mode": "live",
+  "ran": "2026-10-23T08:39:33.711Z",
+  "results": {
+    "thriller global": {
+      "n": 50,
+      "min": 1991,
+      "median": 2013,
+      "pre2018": 50
+    },
+    "thriller US": {
+      "n": 50,
+      "min": 2018,
+      "median": 2019,
+      "pre2018": 0
+    },
+    "thriller US + release_year.max=2017": {
+      "n": 0,
+      "min": null,
+      "median": null,
+      "pre2018": 0
+    },
+    "thriller US + bias.trends=off": {
+      "n": 50,
+      "min": 2018,
+      "median": 2019,
+      "pre2018": 0
+    },
+    "thriller US + location.weight=low": {
+      "n": 50,
+      "min": 2018,
+      "median": 2019,
+      "pre2018": 0
+    },
+    "thriller New York (city)": {
+      "n": 50,
+      "min": 2018,
+      "median": 2019,
+      "pre2018": 0
+    },
+    "classics global": {
+      "n": 50,
+      "min": 1931,
+      "median": 1980,
+      "pre2018": 50
+    },
+    "classics France": {
+      "n": 50,
+      "min": 2018,
+      "median": 2019,
+      "pre2018": 0
+    },
+    "location only France": {
+      "n": 50,
+      "min": 2018,
+      "median": 2020,
+      "pre2018": 0
+    },
+    "location only France + release_year.max=2010": {
+      "n": 0,
+      "min": null,
+      "median": null,
+      "pre2018": 0
+    },
+    "tv_show location only Japan": {
+      "n": 50,
+      "min": 2005,
+      "median": 2019,
+      "pre2018": 2
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { Cache, QlooClient, QlooClientOptions } from "./client";
@@ -21,6 +22,8 @@ export class FileCache implements Cache {
 }
 
 export const PRIVATE_DIR = path.join(process.cwd(), ".private");
+// Serverless filesystems are read-only except the temp dir; the cache there is per instance.
+const CACHE_DIR = process.env.VERCEL ? path.join(os.tmpdir(), "territory-qloo-cache") : path.join(PRIVATE_DIR, "qloo-cache");
 
 export function hasLiveKey(): boolean {
   return Boolean(process.env.QLOO_API_KEY?.trim());
@@ -30,7 +33,7 @@ export function hasLiveKey(): boolean {
 export function createQlooClient(overrides: QlooClientOptions & { mock?: MockOptions; forceMock?: boolean } = {}): QlooClient {
   const { mock, forceMock, ...opts } = overrides;
   if (!forceMock && hasLiveKey()) {
-    return new QlooClient({ cache: new FileCache(path.join(PRIVATE_DIR, "qloo-cache")), ...opts, apiKey: process.env.QLOO_API_KEY!.trim(), source: "live" });
+    return new QlooClient({ cache: new FileCache(CACHE_DIR), ...opts, apiKey: process.env.QLOO_API_KEY!.trim(), source: "live" });
   }
   return new QlooClient({ ...opts, apiKey: "mock", fetchImpl: createMockFetch(mock), source: "mock", sleep: async () => {} });
 }

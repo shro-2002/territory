@@ -47,11 +47,12 @@ describe("runAgent (mock backend, end to end)", () => {
     expect(Object.keys(s.research).sort()).toEqual([...input.targetMarkets].sort());
     expect(s.violations).toEqual([]);
     expect(s.plan.markets.length).toBeGreaterThan(0);
+    expect(s.trace.filter((e) => e.kind === "progress")).toHaveLength(input.targetMarkets.length);
     expect(s.plan.totalCostUsd).toBeLessThanOrEqual(70000);
     expect(assertClaimsGrounded(s.claims)).toEqual([]);
     expect(s.claims.filter((c) => c.provenance === "qloo").every((c) => c.source === "mock")).toBe(true);
     expect(s.comps.filter((c) => c.name).every((c) => c.name!.startsWith(MOCK_PREFIX))).toBe(true);
-    expect(s.trace.map((e) => e.state)).toEqual(["INPUT_VALIDATION", "ENTITY_RESOLUTION", "RESEARCH_PLANNING", "QLOO_INVESTIGATION", "EVIDENCE_VERIFICATION", "STRATEGY_CONSTRUCTION", "CONSTRAINT_VALIDATION", "FINAL_REPORT"]);
+    expect(s.trace.filter((e) => !e.kind).map((e) => e.state)).toEqual(["INPUT_VALIDATION", "ENTITY_RESOLUTION", "RESEARCH_PLANNING", "QLOO_INVESTIGATION", "EVIDENCE_VERIFICATION", "STRATEGY_CONSTRUCTION", "CONSTRAINT_VALIDATION", "FINAL_REPORT"]);
   });
 
   it("is reproducible for identical inputs", async () => {

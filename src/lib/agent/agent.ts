@@ -31,6 +31,10 @@ export interface TraceEvent {
   message: string;
   callIds?: string[];
   at: number;
+  /** Intermediate progress inside a state (e.g. one market finished). */
+  kind?: "progress";
+  /** Market code a progress event refers to. */
+  market?: string;
 }
 
 export interface Session {
@@ -62,10 +66,10 @@ class Tracer {
   readonly events: TraceEvent[] = [];
   constructor(private readonly client: QlooClient, private readonly onEvent?: (e: TraceEvent) => void) {}
   private mark = 0;
-  log(state: AgentState, message: string) {
+  log(state: AgentState, message: string, kind?: "progress", market?: string) {
     const callIds = this.client.calls.slice(this.mark).map((c) => c.id);
     this.mark = this.client.calls.length;
-    const e = { state, message, at: Date.now(), ...(callIds.length ? { callIds } : {}) };
+    const e = { state, message, at: Date.now(), ...(callIds.length ? { callIds } : {}), ...(kind ? { kind } : {}), ...(market ? { market } : {}) };
     this.events.push(e);
     this.onEvent?.(e);
   }
@@ -111,7 +115,7 @@ export async function runAgent(rawInput: unknown, { client, onEvent }: AgentDeps
   }
 
   const research: Record<string, MarketResearch> = {};
-  await researchMarkets(client, markets, context, research);
+  await researchMarkets(client, markets, context, research, (r) => t.log("QLOO_INVESTIGATION", marketLine(r), "progress", r.code));
   t.log("QLOO_INVESTIGATION", summarizeResearch(markets, research));
 
   await verifyAndFallback(client, research, context, t);
@@ -119,12 +123,18 @@ export async function runAgent(rawInput: unknown, { client, onEvent }: AgentDeps
   return finish(input, comps, context, research, t, client, []);
 }
 
-async function researchMarkets(client: QlooClient, codes: string[], ctx: ResearchContext, into: Record<string, MarketResearch>) {
+async function researchMarkets(client: QlooClient, codes: string[], ctx: ResearchContext, into: Record<string, MarketResearch>, onDone?: (r: MarketResearch) => void) {
   await Promise.all(
     codes.map(async (code) => {
       into[code] = await researchMarket(client, code, ctx);
+      onDone?.(into[code]);
     }),
   );
+}
+
+function marketLine(r: MarketResearch) {
+  const name = marketByCode(r.code).name;
+  return r.score === null ? `${name}: insufficient — ${r.insufficientReason}` : `${name}: ${r.overlap}/100 neighbours survive, ${r.score.toFixed(2)}× reference genres`;
 }
 
 /** Thin evidence → widen comps with the comps' closest Qloo titles and retry those markets, once. */
@@ -191,7 +201,7 @@ export async function replan(session: Session, patch: Partial<Constraints>, { cl
   const newlyResearched: string[] = [];
   if (lostSlots > 0) {
     const reserves = session.context ? reserveMarkets(session, after) : [];
-    if (session.context) await researchMarkets(client, reserves, session.context, research);
+    if (session.context) await researchMarkets(client, reserves, session.context, research, (r) => t.log("SELECTIVE_RESEARCH", `Reserve ${marketLine(r)}`, "progress", r.code));
     newlyResearched.push(...reserves);
     t.log("SELECTIVE_RESEARCH", reserves.length ? `${lostSlots} planned market(s) lost; researched reserves ${reserves.join(", ")} (languages already in plan first).` : "No unresearched reserve markets remain.");
   } else {
@@ -200,7 +210,7 @@ export async function replan(session: Session, patch: Partial<Constraints>, { cl
 
   if (!session.context) throw new Error("Cannot replan a session whose research failed");
   const revised = finish(input, session.comps, session.context, research, t, client, session.revisions, session.version + 1);
-  const changes = diffPlans(session.plan, revised.plan);
+  const changes = diffPlans(session.plan, revised.plan, after);
   const revision: Revision = { version: revised.version, constraints: after, invalidated, reusedMarkets: Object.keys(session.research), newlyResearched, changes };
   return { ...revised, trace: [...session.trace, ...revised.trace], revisions: [...session.revisions, revision] };
 }
@@ -213,18 +223,32 @@ function reserveMarkets(session: Session, after: Constraints): string[] {
     .map((m) => m.code);
 }
 
-export function diffPlans(prev: Plan, next: Plan): string[] {
+export function diffPlans(prev: Plan, next: Plan, after?: Constraints): string[] {
   const changes: string[] = [];
   const p = new Map(prev.markets.map((m) => [m.code, m]));
   const n = new Map(next.markets.map((m) => [m.code, m]));
-  for (const [code, m] of p) if (!n.has(code)) changes.push(`Dropped ${m.name}`);
+  const why = (m: Plan["markets"][number]) => {
+    if (after?.excludedMarkets.includes(m.code)) return "market excluded";
+    if (after?.excludedLanguages.includes(m.language)) return `${m.language} excluded`;
+    if (next.excluded.some((e) => e.code === m.code && e.reason !== "outside top candidates")) return next.excluded.find((e) => e.code === m.code)!.reason;
+    return "outscored by a better-value combination under the new constraints";
+  };
+  for (const [code, m] of p) if (!n.has(code)) changes.push(`Dropped ${m.name} — ${why(m)}`);
   for (const [code, m] of n) {
     const old = p.get(code);
-    if (!old) changes.push(`Added ${m.name} (${m.mode})`);
-    else if (old.mode !== m.mode) changes.push(`${m.name}: ${old.mode} → ${m.mode}`);
+    const cost = m.mode === "original" ? "no localization cost" : `${m.mode} ${m.language}`;
+    if (!old) changes.push(`Added ${m.name} — ${m.score.toFixed(2)}× lift, ${cost}`);
+    else if (old.mode !== m.mode) changes.push(`${m.name}: ${old.mode} → ${m.mode}${modeReason(old.mode, m.mode, after)}`);
   }
   if (prev.totalCostUsd !== next.totalCostUsd) changes.push(`Spend $${prev.totalCostUsd.toLocaleString("en-US")} → $${next.totalCostUsd.toLocaleString("en-US")}`);
   return changes.length ? changes : ["No change: the previous plan remains optimal under the new constraints"];
+}
+
+function modeReason(from: string, to: string, after?: Constraints) {
+  if (after?.subtitleFirst && to === "subtitle") return " (subtitle-first rule)";
+  if (from === "dub" && to === "subtitle") return " to fit the budget";
+  if (from === "subtitle" && to === "dub") return " — budget now allows a dub";
+  return "";
 }
 
 function summarizeResearch(codes: string[], research: Record<string, MarketResearch>) {
