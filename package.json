@@ -19,9 +19,11 @@
   },
   "dependencies": {
     "d3-geo": "3.1.1",
+    "motion": "14.6.0",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "three": "0.186.1",
     "topojson-client": "3.1.0",
     "world-atlas": "2.0.2",
     "zod": "4.6.7"
@@ -33,6 +35,7 @@
     "@types/node": "24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "0.186.0",
     "@types/topojson-client": "3.1.5",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",

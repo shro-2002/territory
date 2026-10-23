@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { AgentInput, Session, TraceEvent } from "@/lib/agent/agent";
 import { briefMarkdown } from "@/lib/client/brief";
@@ -8,11 +8,14 @@ import { streamAgent } from "@/lib/client/stream";
 import type { CallRecord } from "@/lib/qloo/types";
 import { marketByCode } from "@/lib/territory/markets";
 import type { Constraints } from "@/lib/territory/planner";
-import { Atlas } from "./Atlas";
-import { BriefForm } from "./BriefForm";
+import { AtlasSection } from "./AtlasSection";
+import { BriefDialog } from "./BriefDialog";
+import { BriefingExport } from "./BriefingExport";
 import { EvidenceLab, ExperimentSummary } from "./EvidenceLab";
-import { MarketPanel } from "./MarketPanel";
-import { TracePanel } from "./TracePanel";
+import { Hero } from "./Hero";
+import { SiteNav } from "./SiteNav";
+import { StrategySummary } from "./StrategySummary";
+import { BudgetSection } from "./BudgetSection";
 import { WarRoom } from "./WarRoom";
 
 type Version = { session: Session; token: string; context: string | null; label: string };
@@ -33,12 +36,21 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
   const abort = useRef<AbortController | null>(null);
 
   const current = versions.at(-1) ?? null;
-  const previous = versions.length > 1 ? versions[versions.length - 2] : null;
   const session = current?.session ?? null;
   // The research context stays server-side (encrypted); its presence means the plan can be revised.
   const canReplan = Boolean(current?.context);
   const doneMarkets = new Set(trace.filter((e) => e.kind === "progress" && e.market).map((e) => e.market!));
   const pending = busy ? (busy === "run" ? input.targetMarkets : []).filter((c) => !doneMarkets.has(c)) : [];
+  const history = versions.map((v) => ({ session: v.session, label: v.label }));
+  const latestMarket = [...trace].reverse().find((e) => e.kind === "progress" && e.market)?.market;
+  const progress = { done: doneMarkets.size, total: busy === "run" ? input.targetMarkets.length : 0, latest: latestMarket ? marketByCode(latestMarket).name : null };
+  const planCodes = session?.plan.markets.map((m) => m.code) ?? [];
+
+  // Bring the first result into view once, so the strategy is the first thing seen after the click.
+  const hasResult = Boolean(session);
+  useEffect(() => {
+    if (hasResult && versions.length === 1) document.getElementById("strategy")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [hasResult, versions.length]);
 
   async function execute(body: unknown, label: string, mode: string, reset: boolean) {
     abort.current?.abort();
@@ -94,121 +106,50 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
     URL.revokeObjectURL(a.href);
   };
 
+  const inspect = (code: string) => {
+    setSelected(code);
+    document.getElementById("atlas")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <div className="relative z-10 mx-auto max-w-[1400px] px-4 pb-24 sm:px-8">
-      <header className="flex flex-wrap items-center justify-between gap-3 py-6">
-        <div className="flex items-baseline gap-4">
-          <span className="font-display text-2xl tracking-tight">Territory</span>
-          <span className="hidden text-xs text-bone-faint sm:inline">distribution war room for independent film</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`rounded-full border px-2.5 py-1 font-mono text-[0.65rem] uppercase tracking-wider ${source === "live" ? "border-ok/50 text-ok" : "border-ember/60 text-ember"}`}>
-            {source === "live" ? "Live Qloo API" : "Mock data — not Qloo evidence"}
-          </span>
-          {session && <button type="button" className="btn" onClick={exportBrief}>Export briefing (.md)</button>}
-        </div>
-      </header>
-
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <div className="space-y-5">
-          {!session && !busy && (
-            <div className="rise">
-              <h1 className="font-display text-3xl leading-[1.08] sm:text-[2.6rem]">Where will an unreleased film travel — and what happens when the plan breaks?</h1>
-              <p className="mt-3 max-w-xl text-sm text-bone-dim">Territory researches each market with Qloo&apos;s taste graph, builds a localization plan under your budget, then <span className="text-bone">re-plans when you remove a market or cut the budget</span> — reusing evidence and showing exactly what changed.</p>
-              <ol className="mt-4 grid grid-cols-3 gap-2 text-xs text-bone-dim">
-                {["Research markets with Qloo", "Plan the release", "Break the plan in the War Room"].map((s, i) => (
-                  <li key={s} className="rounded-lg border border-line px-3 py-2"><span className="font-mono text-amber">0{i + 1}</span> {s}</li>
-                ))}
-              </ol>
-            </div>
-          )}
-          {isEditing ? (
-            <BriefForm initial={input} onSubmit={run} onCancel={() => setIsEditing(false)} />
-          ) : (
-            <FilmCard input={input} isBusy={Boolean(busy)} hasRun={Boolean(session)} onRun={() => run(input)} onEdit={() => setIsEditing(true)} />
-          )}
-          {error && <p role="alert" className="panel border-ember/60 p-4 text-sm text-ember">{error}</p>}
-          {notice && <p role="status" className="panel border-amber/50 p-4 text-sm text-amber">{notice}</p>}
-          <TracePanel events={trace} isRunning={Boolean(busy)} startedAt={startedAt} lastCalls={lastCalls} />
-          {session && canReplan && !busy && (
-            <a href="#reality-shock" className="btn-primary w-full justify-center">Next: break the plan in the War Room ↓</a>
-          )}
-        </div>
-
-        <div className="space-y-5">
-          <div className="panel p-4 sm:p-5">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="eyebrow">Cultural market atlas</p>
-              <p className="text-xs text-bone-faint">{session ? "click a market for its evidence" : busy ? "investigating…" : "run research to light the map"}</p>
-            </div>
-            <Atlas
-              research={session?.research ?? {}}
-              planCodes={session?.plan.markets.map((m) => m.code) ?? []}
-              candidateCodes={input.targetMarkets}
-              excludedCodes={session?.input.constraints.excludedMarkets ?? []}
-              selected={selected}
-              onSelect={setSelected}
-              pending={pending}
-            />
-            {session && (
-              <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Researched markets">
-                {Object.values(session.research).sort((a, b) => (b.score ?? -1) - (a.score ?? -1)).map((r) => (
-                  <button key={r.code} type="button" onClick={() => setSelected(r.code)} aria-pressed={selected === r.code} className={`rounded-full border px-2.5 py-1 text-xs tabular-nums ${selected === r.code ? "border-bone text-bone" : "border-line-2 text-bone-dim hover:text-bone"}`}>
-                    {marketByCode(r.code).name} {r.score === null ? "—" : `${r.score.toFixed(2)}×`}
-                  </button>
-                ))}
-              </div>
-            )}
+    <div className="relative z-10">
+      <SiteNav source={source} hasResult={Boolean(session)} onExport={exportBrief} />
+      <main>
+        <Hero input={input} source={source} isBusy={busy === "run"} hasResult={Boolean(session)} progress={progress} pendingCodes={busy === "run" ? pending : []} planCodes={planCodes} onRun={() => run(input)} onEdit={() => setIsEditing(true)} />
+        {(error || notice) && (
+          <div className="mx-auto max-w-[1320px] px-4 sm:px-8">
+            {error && <p role="alert" className="panel border-rose/60 p-4 text-sm text-rose">{error}</p>}
+            {notice && <p role="status" className="panel border-warm/50 p-4 text-sm text-warm">{notice}</p>}
           </div>
-          {session && selected && <MarketPanel key={`${selected}-${session.version}`} session={session} code={selected} />}
-        </div>
-      </section>
+        )}
+        {session && canReplan && (
+          <>
+            <StrategySummary session={session} stats={lastCalls} onInspect={inspect} />
+            <BudgetSection session={session} />
+            <AtlasSection session={session} selected={selected} pending={pending} onSelect={setSelected} />
+            <WarRoom key={session.version} history={history} isBusy={Boolean(busy)} isReplanning={busy === "replan"} progressLine={busy === "replan" ? trace.at(-1)?.message ?? null : null} onReplan={replan} />
+          </>
+        )}
+        {session && !canReplan && (
+          <div role="alert" className="mx-auto mt-10 max-w-[1320px] px-4 sm:px-8">
+            <div className="panel p-6">
+              <p className="text-rose">Research failed for this brief, so Territory made no recommendation.</p>
+              {session.trace.at(-1) && <p className="mt-2 text-sm text-bone-dim">{session.trace.at(-1)!.message}</p>}
+              <button type="button" className="btn mt-4" onClick={() => setIsEditing(true)}>Edit film brief</button>
+            </div>
+          </div>
+        )}
+        {(session || trace.length > 0 || calls.length > 0) && (
+          <EvidenceLab key={session ? "with-session" : "empty"} session={session} calls={calls} summary={summary} trace={trace} isRunning={Boolean(busy)} startedAt={startedAt} lastCalls={lastCalls} />
+        )}
+        {session && canReplan && <BriefingExport session={session} onExport={exportBrief} />}
+      </main>
 
-      {session && canReplan && (
-        <section className="mt-8">
-          <WarRoom key={session.version} session={session} previous={previous?.session ?? null} isBusy={Boolean(busy)} onReplan={replan} onSelect={setSelected} />
-          {versions.length > 1 && (
-            <p className="mt-3 text-xs text-bone-faint">History: {versions.map((v) => `v${v.session.version} ${v.label}`).join(" → ")}</p>
-          )}
-        </section>
-      )}
-      {session && !canReplan && <p className="panel mt-8 p-5 text-sm text-ember">Research failed for this brief, so there is no plan to revise. See the agent activity for the reason, then edit the brief.</p>}
+      {isEditing && <BriefDialog initial={input} onSubmit={run} onCancel={() => setIsEditing(false)} />}
 
-      <section className="mt-8">
-        <EvidenceLab key={session ? "with-session" : "empty"} session={session} calls={calls} summary={summary} />
-      </section>
-
-      <footer className="mt-10 border-t border-line pt-5 text-xs leading-relaxed text-bone-faint">
+      <footer className="mx-auto mt-32 max-w-[1320px] border-t border-line px-4 py-8 text-xs leading-relaxed text-bone-faint sm:px-8">
         Taste portability measures how much of the comps&apos; Qloo taste neighbourhood survives when conditioned on a market, relative to reference genres there. It is not a box-office, audience-size or revenue forecast. Location-conditioned Qloo movie data covers 2018+ releases. Cost figures are illustrative user assumptions. Built for the Qloo Agentic Hackathon 2026 · MIT licence.
       </footer>
     </div>
-  );
-}
-
-function FilmCard({ input, isBusy, hasRun, onRun, onEdit }: { input: AgentInput; isBusy: boolean; hasRun: boolean; onRun: () => void; onEdit: () => void }) {
-  return (
-    <article className="panel p-5">
-      <p className="eyebrow">{input.genre || "Film"} · {input.originalLanguage} · unreleased</p>
-      <h2 className="mt-1 font-display text-3xl leading-tight">{input.title}</h2>
-      <p className="mt-3 text-sm leading-relaxed text-bone-dim">{input.synopsis}</p>
-      <div className="mt-4">
-        <p className="eyebrow mb-2">Comparable titles</p>
-        <ul className="flex flex-wrap gap-2">
-          {input.comps.map((c) => (
-            <li key={c.name} className="rounded-full border border-line-2 px-3 py-1 text-xs">{c.name}{c.year ? <span className="text-bone-faint"> {c.year}</span> : null}</li>
-          ))}
-        </ul>
-      </div>
-      <dl className="mt-4 grid grid-cols-3 gap-3 text-xs">
-        <div><dt className="text-bone-faint">Budget</dt><dd className="tabular-nums text-bone">${input.constraints.budgetUsd.toLocaleString("en-US")}</dd></div>
-        <div><dt className="text-bone-faint">Max markets</dt><dd className="text-bone">{input.constraints.maxMarkets}</dd></div>
-        <div><dt className="text-bone-faint">Candidates</dt><dd className="text-bone">{input.targetMarkets.length} markets</dd></div>
-      </dl>
-      <div className="mt-5 flex flex-wrap gap-2">
-        <button type="button" className="btn-primary" disabled={isBusy} onClick={onRun}>{isBusy ? "Researching…" : hasRun ? "Re-run research" : "Run research"}</button>
-        <button type="button" className="btn" disabled={isBusy} onClick={onEdit}>Edit brief</button>
-      </div>
-      <p className="mt-3 text-[0.7rem] text-bone-faint">The showcase brief is answered in ~2 s from a private cache of earlier live Qloo responses. Edit the brief to research your own film live (~40 s, real Qloo calls). The activity log reports exactly which.</p>
-    </article>
   );
 }

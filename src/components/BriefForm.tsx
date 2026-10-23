@@ -30,9 +30,10 @@ export function BriefForm({ initial, onSubmit, onCancel }: Props) {
     onSubmit({ ...draft, title: draft.title.trim(), comps, constraints: { ...draft.constraints, excludedMarkets: [], excludedLanguages: [], subtitleFirst: false } });
   };
 
-  const field = "w-full rounded-lg border border-line-2 bg-ink px-3 py-2 text-sm text-bone placeholder:text-bone-faint";
+  const field = "field";
   return (
-    <form onSubmit={submit} className="panel rise space-y-4 p-5" aria-label="Film brief">
+    <form onSubmit={submit} className="panel space-y-4 p-6 sm:p-8" aria-label="Film brief">
+      <h2 className="display text-3xl">Your film</h2>
       <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
         <label className="space-y-1 text-xs text-bone-dim">Title or working title
           <input className={field} value={draft.title} maxLength={120} onChange={(e) => set("title", e.target.value)} />
@@ -64,7 +65,7 @@ export function BriefForm({ initial, onSubmit, onCancel }: Props) {
         <legend className="mb-2 text-xs text-bone-dim">Candidate markets</legend>
         <div className="flex flex-wrap gap-1.5">
           {MARKETS.map((m) => (
-            <button key={m.code} type="button" aria-pressed={draft.targetMarkets.includes(m.code)} onClick={() => toggleMarket(m.code)} className={`rounded-full border px-2.5 py-1 text-xs ${draft.targetMarkets.includes(m.code) ? "border-amber bg-amber/10 text-amber" : "border-line-2 text-bone-dim"}`}>
+            <button key={m.code} type="button" aria-pressed={draft.targetMarkets.includes(m.code)} onClick={() => toggleMarket(m.code)} className={`rounded-full border px-2.5 py-1 text-xs ${draft.targetMarkets.includes(m.code) ? "border-violet bg-violet/15 text-bone" : "border-line-2 text-bone-dim"}`}>
               {m.name}
             </button>
           ))}
@@ -79,7 +80,7 @@ export function BriefForm({ initial, onSubmit, onCancel }: Props) {
           <input className={field} type="number" min={1} max={8} value={draft.constraints.maxMarkets} onChange={(e) => set("constraints", { ...draft.constraints, maxMarkets: Math.max(1, Math.min(8, Number(e.target.value) || 1)) })} />
         </label>
       </div>
-      {error && <p className="text-sm text-ember" role="alert">{error}</p>}
+      {error && <p className="text-sm text-rose" role="alert">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" className="btn-primary">Run live research</button>
         <button type="button" className="btn" onClick={onCancel}>Cancel</button>

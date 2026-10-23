@@ -1,18 +1,21 @@
 "use client";
 
-import { geoNaturalEarth1, geoPath } from "d3-geo";
-import { useMemo } from "react";
+import { geoGraticule10, geoNaturalEarth1, geoPath } from "d3-geo";
+import { useMemo, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import world from "world-atlas/countries-110m.json";
 
 import type { MarketResearch } from "@/lib/agent/agent";
+import { MARKET_GEO } from "@/lib/territory/market-geo";
 import { MARKETS } from "@/lib/territory/markets";
 
 const WIDTH = 960;
-const HEIGHT = 470;
+const HEIGHT = 480;
+const LIFT_FLOOR = 0.4;
+const LIFT_SPAN = 1;
 
-type Status = "plan" | "scored" | "insufficient" | "excluded" | "candidate" | "none";
+export type AtlasStatus = "plan" | "scored" | "insufficient" | "excluded" | "candidate" | "none";
 
 export interface AtlasProps {
   research: Record<string, MarketResearch>;
@@ -25,25 +28,34 @@ export interface AtlasProps {
   pending?: string[];
 }
 
-/** Sequential amber ramp for lift; clamped to the 0.4–1.4× range seen live. */
-function liftColor(score: number): string {
-  const t = Math.max(0, Math.min(1, (score - 0.4) / 1.0));
-  const l = 22 + t * 46;
-  const c = 0.05 + t * 0.11;
-  return `oklch(${l}% ${c} 70)`;
-}
+export const STATUS_LABEL: Record<AtlasStatus, string> = {
+  plan: "Selected",
+  scored: "Researched",
+  insufficient: "Insufficient evidence",
+  excluded: "Excluded",
+  candidate: "Awaiting research",
+  none: "Not a candidate",
+};
+
+const lift = (score: number) => Math.max(0, Math.min(1, (score - LIFT_FLOOR) / LIFT_SPAN));
 
 export function Atlas({ research, planCodes, candidateCodes, excludedCodes, selected, onSelect, pending = [] }: AtlasProps) {
-  const { paths } = useMemo(() => {
+  const tilt = useRef<HTMLDivElement>(null);
+  const { paths, graticule, points } = useMemo(() => {
     const topo = world as unknown as Topology<{ countries: GeometryCollection<{ name: string }> }>;
     const fc = feature(topo, topo.objects.countries);
-    const projection = geoNaturalEarth1().fitExtent([[8, 8], [WIDTH - 8, HEIGHT - 8]], fc);
+    const land = { ...fc, features: fc.features.filter((f) => f.properties?.name !== "Antarctica") };
+    const projection = geoNaturalEarth1().fitExtent([[10, 10], [WIDTH - 10, HEIGHT - 10]], land);
     const gen = geoPath(projection);
-    return { paths: fc.features.filter((f) => f.properties?.name !== "Antarctica").map((f, i) => ({ id: String(f.id), key: `${f.id ?? "x"}-${i}`, d: gen(f) ?? "" })) };
+    return {
+      paths: land.features.map((f, i) => ({ id: String(f.id), key: `${f.id ?? "x"}-${i}`, d: gen(f) ?? "" })),
+      graticule: gen(geoGraticule10()) ?? "",
+      points: Object.fromEntries(Object.entries(MARKET_GEO).map(([code, ll]) => [code, projection(ll)])),
+    };
   }, []);
 
   const byIso = new Map(MARKETS.map((m) => [m.iso, m]));
-  const status = (code: string): Status => {
+  const status = (code: string): AtlasStatus => {
     if (excludedCodes.includes(code)) return "excluded";
     if (planCodes.includes(code)) return "plan";
     const r = research[code];
@@ -51,47 +63,102 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
     return candidateCodes.includes(code) ? "candidate" : "none";
   };
 
+  const onMove = (e: PointerEvent) => {
+    const el = tilt.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--ry", `${((e.clientX - r.left) / r.width - 0.5) * 7}deg`);
+    el.style.setProperty("--rx", `${-((e.clientY - r.top) / r.height - 0.5) * 5}deg`);
+  };
+  const onLeave = () => {
+    tilt.current?.style.setProperty("--ry", "0deg");
+    tilt.current?.style.setProperty("--rx", "0deg");
+  };
+  const keySelect = (code: string) => (e: KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect(code);
+    }
+  };
+
   return (
-    <figure className="relative">
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full h-auto" role="img" aria-label="World map of candidate markets coloured by taste-portability lift">
-        <defs>
-          <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <line x1="0" y1="0" x2="0" y2="6" stroke="var(--ember)" strokeWidth="2" opacity="0.55" />
-          </pattern>
-        </defs>
-        {paths.map((p) => {
-          const m = byIso.get(p.id);
-          if (!m) return <path key={p.key} d={p.d} fill="#16140f" stroke="#221f19" strokeWidth={0.5} />;
-          const st = status(m.code);
-          const r = research[m.code];
-          const fill = st === "excluded" ? "url(#hatch)" : st === "insufficient" ? "#2a1a14" : r?.score != null ? liftColor(r.score) : st === "candidate" ? "#4a3f2e" : "#16140f";
-          const isPending = pending.includes(m.code);
-          const clickable = st !== "none";
-          return (
-            <path
-              key={p.key}
-              d={p.d}
-              fill={fill}
-              stroke={selected === m.code ? "var(--bone)" : st === "plan" ? "var(--amber)" : "#3b352c"}
-              strokeWidth={selected === m.code ? 2 : st === "plan" ? 1.6 : 0.7}
-              className={`${clickable ? "cursor-pointer" : ""} ${isPending ? "pulse" : ""} transition-[fill] duration-500`}
-              onClick={clickable ? () => onSelect(m.code) : undefined}
-              aria-hidden
-            >
-              <title>{`${m.name}${r?.score != null ? ` — ${r.score.toFixed(2)}× lift` : st === "insufficient" ? " — insufficient evidence" : ""}`}</title>
-            </path>
-          );
-        })}
-      </svg>
-      <figcaption className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-bone-dim">
-        <span className="flex items-center gap-2">
-          <span className="h-2 w-16 rounded-full" style={{ background: `linear-gradient(90deg, ${liftColor(0.4)}, ${liftColor(1.4)})` }} />
-          lift 0.4× → 1.4×
-        </span>
-        <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm border-2 border-amber" />in plan</span>
-        <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm" style={{ background: "#2a1a14" }} />insufficient evidence</span>
-        <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm" style={{ background: "repeating-linear-gradient(45deg, var(--ember) 0 2px, transparent 2px 5px)" }} />excluded</span>
+    <figure className="relative" onPointerMove={onMove} onPointerLeave={onLeave}>
+      <div aria-hidden className="pointer-events-none absolute inset-x-[8%] bottom-[-6%] h-24 rounded-[50%] bg-violet-deep/25 blur-3xl" />
+      <div ref={tilt} className="tilt">
+        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="h-auto w-full overflow-visible" role="group" aria-label="World map of candidate markets">
+          <defs>
+            <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="7" height="7" fill="#1c0f16" />
+              <line x1="0" y1="0" x2="0" y2="7" stroke="var(--rose)" strokeWidth="2" opacity="0.6" />
+            </pattern>
+            <linearGradient id="planFill" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#b8aeff" />
+              <stop offset="1" stopColor="#6c5ce7" />
+            </linearGradient>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="4" result="b" />
+              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+          <path d={graticule} fill="none" stroke="#2a3263" strokeWidth={0.5} opacity={0.55} />
+          {paths.map((p) => {
+            const m = byIso.get(p.id);
+            if (!m) return <path key={p.key} d={p.d} fill="#151b35" stroke="#262e52" strokeWidth={0.5} />;
+            const st = status(m.code);
+            const r = research[m.code];
+            const fill =
+              st === "plan" ? "url(#planFill)" : st === "excluded" ? "url(#hatch)" : st === "insufficient" ? "#1d1810" : st === "scored" && r?.score != null ? `rgba(79,214,204,${0.14 + lift(r.score) * 0.42})` : st === "candidate" ? "#232b57" : "#151b35";
+            const clickable = st !== "none";
+            const isSelected = selected === m.code;
+            return (
+              <path
+                key={p.key}
+                d={p.d}
+                fill={fill}
+                filter={st === "plan" ? "url(#glow)" : undefined}
+                stroke={isSelected ? "var(--bone)" : st === "plan" ? "#d7d1ff" : st === "insufficient" ? "var(--warm)" : st === "scored" ? "rgba(79,214,204,0.5)" : "#2a3050"}
+                strokeWidth={isSelected ? 2 : st === "plan" ? 1.2 : 0.7}
+                strokeDasharray={st === "insufficient" ? "3 3" : undefined}
+                className={`${clickable ? "cursor-pointer" : ""} ${pending.includes(m.code) ? "pulse" : ""} outline-none transition-[fill,stroke] duration-500 focus-visible:stroke-[var(--bone)]`}
+                role={clickable ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                aria-label={clickable ? `${m.name}: ${STATUS_LABEL[st]}` : undefined}
+                aria-pressed={clickable ? isSelected : undefined}
+                onClick={clickable ? () => onSelect(m.code) : undefined}
+                onKeyDown={clickable ? keySelect(m.code) : undefined}
+              >
+                <title>{`${m.name} — ${STATUS_LABEL[st]}${r?.score != null ? ` · ${r.score.toFixed(2)}×` : ""}`}</title>
+              </path>
+            );
+          })}
+          {planCodes.map((code, i) => {
+            const pt = points[code];
+            if (!pt) return null;
+            return (
+              <g key={code} transform={`translate(${pt[0]} ${pt[1]})`} className="pointer-events-none">
+                <circle r={15} fill="none" stroke="var(--violet)" strokeWidth={1} opacity={0.5} />
+                <circle r={11} fill="#0a0820" stroke="#d7d1ff" strokeWidth={1.4} />
+                <text textAnchor="middle" dy="0.35em" fontSize={11} fontWeight={600} fill="#ecebf5">{i + 1}</text>
+              </g>
+            );
+          })}
+          {Object.keys(research).filter((c) => !planCodes.includes(c) && points[c] && (selected === c || research[c].score !== null)).map((code) => {
+            const pt = points[code];
+            return <circle key={code} cx={pt![0]} cy={pt![1]} r={selected === code ? 4.5 : 3} fill={research[code].score === null ? "var(--warm)" : "var(--teal)"} stroke="#06070c" strokeWidth={1} className="pointer-events-none" />;
+          })}
+        </svg>
+      </div>
+      <figcaption className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-bone-dim">
+        <Legend swatch={<span className="h-3 w-3 rounded-sm" style={{ background: "linear-gradient(135deg,#b8aeff,#6c5ce7)" }} />} label="Selected" />
+        <Legend swatch={<span className="h-3 w-3 rounded-sm bg-teal/40 ring-1 ring-teal/60" />} label="Researched" />
+        <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-warm" style={{ background: "#1d1810" }} />} label="Insufficient evidence" />
+        <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-rose/60" style={{ background: "repeating-linear-gradient(45deg,var(--rose) 0 2px,#1c0f16 2px 5px)" }} />} label="Excluded" />
+        <span className="text-bone-faint">Brighter teal = more of your comps&apos; taste carries over</span>
       </figcaption>
     </figure>
   );
+}
+
+function Legend({ swatch, label }: { swatch: React.ReactNode; label: string }) {
+  return <span className="flex items-center gap-2">{swatch}{label}</span>;
 }
