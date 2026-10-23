@@ -21,9 +21,11 @@ type Props = {
   events: TraceEvent[];
   isRunning: boolean;
   startedAt: number | null;
+  /** Calls made by the last completed request: how many reached Qloo vs the private cache. */
+  lastCalls: { live: number; cached: number } | null;
 };
 
-export function TracePanel({ events, isRunning, startedAt }: Props) {
+export function TracePanel({ events, isRunning, startedAt, lastCalls }: Props) {
   if (!events.length && !isRunning) return null;
   return (
     <section className="panel p-5" aria-live="polite" aria-label="Agent activity">
@@ -45,10 +47,18 @@ export function TracePanel({ events, isRunning, startedAt }: Props) {
             </span>
             <span className="text-bone/90 leading-snug">
               {e.message}
-              {e.callIds && <span className="ml-2 font-mono text-[0.7rem] text-amber/70">{e.callIds.length} Qloo call{e.callIds.length > 1 ? "s" : ""}</span>}
+              {e.callIds && <span className="ml-2 font-mono text-[0.7rem] text-amber/70">{e.callIds.length} Qloo request{e.callIds.length > 1 ? "s" : ""}</span>}
             </span>
           </li>
         ))}
+        {!isRunning && lastCalls && (
+          <li className="grid grid-cols-[8.5rem_1fr] gap-3 text-xs text-bone-dim">
+            <span className="font-mono uppercase tracking-wider text-bone-faint">Evidence source</span>
+            <span>
+              {lastCalls.live + lastCalls.cached} Qloo requests · <span className="text-ok">{lastCalls.live} live</span> · {lastCalls.cached} answered from the private cache of earlier live Qloo responses
+            </span>
+          </li>
+        )}
         {isRunning && (
           <li className="grid grid-cols-[8.5rem_1fr] gap-3 text-sm text-bone-faint">
             <span />

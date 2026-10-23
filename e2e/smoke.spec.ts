@@ -5,7 +5,7 @@ test("judge journey: research, inspect, remove a market, cut budget, export", as
   await expect(page.getByRole("heading", { level: 1 })).toContainText("unreleased film");
   await expect(page.getByText("Mock data — not Qloo evidence")).toBeVisible();
 
-  await page.getByRole("button", { name: "Run live research" }).click();
+  await page.getByRole("button", { name: "Run research", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Release plan" })).toBeVisible();
   await expect(page.getByText("✓ Independent check passed")).toBeVisible();
 

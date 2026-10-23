@@ -26,8 +26,24 @@ export function WarRoom({ session, previous, isBusy, onReplan, onSelect }: Props
   const budget = Number(budgetDraft);
   const isBudgetValid = Number.isFinite(budget) && budget >= 0 && budget !== c.budgetUsd;
 
+  const shockMarket = session.plan.markets.find((m) => m.mode !== "original") ?? session.plan.markets[0];
   return (
     <section className="space-y-5" aria-label="Distribution War Room">
+      {shockMarket && (
+        <div id="reality-shock" className="panel rise border-amber/50 p-5" style={{ background: "linear-gradient(120deg, rgba(233,180,92,0.12), rgba(20,18,15,0.95) 60%)" }}>
+          <p className="eyebrow text-amber">Reality shock · War Room</p>
+          <h3 className="mt-1 font-display text-2xl">The plan just broke. Watch Territory re-plan.</h3>
+          <p className="mt-1 max-w-3xl text-sm text-bone-dim">Pick a disruption. The agent works out which decisions are invalidated, keeps the evidence that is still valid, researches replacements only if it must, then re-optimizes and re-verifies.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button type="button" disabled={isBusy} onClick={() => remove(shockMarket.code)} className="btn-primary">
+              {shockMarket.name} buyer pulled out — remove {shockMarket.name}
+            </button>
+            <button type="button" disabled={isBusy} onClick={() => onReplan({ budgetUsd: Math.round(c.budgetUsd * BUDGET_CUT) }, "Cut budget 40%")} className="btn-primary">
+              Financier cut localization 40% → {usd(Math.round(c.budgetUsd * BUDGET_CUT))}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="panel p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -43,11 +59,11 @@ export function WarRoom({ session, previous, isBusy, onReplan, onSelect }: Props
       </div>
 
       <div className="panel p-5">
-        <p className="eyebrow mb-1">War Room</p>
-        <h3 className="font-display text-xl">Break the plan</h3>
+        <p className="eyebrow mb-1">War Room controls</p>
+        <h3 className="font-display text-xl">More ways to break the plan</h3>
         <p className="mt-1 text-sm text-bone-dim">Each change re-runs the agent: it finds which decisions are invalidated, reuses existing evidence, researches replacements only when needed, then re-optimizes and re-verifies.</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" disabled={isBusy} onClick={() => onReplan({ budgetUsd: Math.round(c.budgetUsd * BUDGET_CUT) }, "Cut budget 40%")} className="btn-primary">
+          <button type="button" disabled={isBusy} onClick={() => onReplan({ budgetUsd: Math.round(c.budgetUsd * BUDGET_CUT) }, "Cut budget 40%")} className="btn">
             Cut budget 40% <span className="opacity-70">→ {usd(Math.round(c.budgetUsd * BUDGET_CUT))}</span>
           </button>
           <button type="button" disabled={isBusy || c.maxMarkets <= 1} onClick={() => onReplan({ maxMarkets: c.maxMarkets - 1 }, `Fewer markets (${c.maxMarkets - 1})`)} className="btn">

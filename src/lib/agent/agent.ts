@@ -85,9 +85,10 @@ class Tracer {
   readonly events: TraceEvent[] = [];
   constructor(private readonly client: QlooClient, private readonly onEvent?: (e: TraceEvent) => void) {}
   private mark = 0;
-  log(state: AgentState, message: string, kind?: "progress", market?: string) {
-    const callIds = this.client.calls.slice(this.mark).map((c) => c.id);
-    this.mark = this.client.calls.length;
+  /** Progress events cite only their own market's calls (markets run in parallel); state events cite every call since the last state. */
+  log(state: AgentState, message: string, kind?: "progress", market?: string, ownCallIds?: string[]) {
+    const callIds = kind === "progress" ? (ownCallIds ?? []) : this.client.calls.slice(this.mark).map((c) => c.id);
+    if (kind !== "progress") this.mark = this.client.calls.length;
     const e = { state, message, at: Date.now(), ...(callIds.length ? { callIds } : {}), ...(kind ? { kind } : {}), ...(market ? { market } : {}) };
     this.events.push(e);
     this.onEvent?.(e);
@@ -134,7 +135,7 @@ export async function runAgent(rawInput: unknown, { client, onEvent }: AgentDeps
   }
 
   const research: Record<string, MarketResearch> = {};
-  await researchMarkets(client, markets, context, research, (r) => t.log("QLOO_INVESTIGATION", marketLine(r), "progress", r.code));
+  await researchMarkets(client, markets, context, research, (r) => t.log("QLOO_INVESTIGATION", marketLine(r), "progress", r.code, r.callIds));
   t.log("QLOO_INVESTIGATION", summarizeResearch(markets, research));
 
   await verifyAndFallback(client, research, context, t);
@@ -234,7 +235,7 @@ export async function replan(session: Session, patch: Partial<Constraints>, { cl
     else {
       decisions.push({ action: "research_reserve_markets", reason: `${lost.map((m) => m.name).join(", ")} lost${needMore ? " and too few eligible researched markets remain" : ""}; replacements ranked by ${reserves.map((r) => `${marketByCode(r.code).name} (${r.why})`).join(", ")}`, markets: reserves.map((r) => r.code) });
       newlyResearched = reserves.map((r) => r.code);
-      await researchMarkets(client, newlyResearched, session.context, research, (r) => t.log("SELECTIVE_RESEARCH", `Reserve ${marketLine(r)}`, "progress", r.code));
+      await researchMarkets(client, newlyResearched, session.context, research, (r) => t.log("SELECTIVE_RESEARCH", `Reserve ${marketLine(r)}`, "progress", r.code, r.callIds));
     }
   }
   t.log("SELECTIVE_RESEARCH", decisions.slice(1).map((d) => `${d.action === "skip_research" ? "No new Qloo research" : `Researched ${d.markets!.join(", ")}`}: ${d.reason}.`).join(" "));

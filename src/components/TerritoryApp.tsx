@@ -23,6 +23,7 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [versions, setVersions] = useState<Version[]>([]);
   const [calls, setCalls] = useState<CallRecord[]>([]);
+  const [lastCalls, setLastCalls] = useState<{ live: number; cached: number } | null>(null);
   const [trace, setTrace] = useState<TraceEvent[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -43,6 +44,7 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
     setError(null);
     setTrace([]);
     setStartedAt(Date.now());
+    setLastCalls(null);
     if (reset) {
       setVersions([]);
       setCalls([]);
@@ -55,6 +57,8 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
         else {
           setVersions((v) => [...v, { session: m.session, token: m.token, label }]);
           setCalls((c) => [...c, ...m.calls]);
+          const live = m.calls.filter((x) => !x.cacheHit).length;
+          setLastCalls({ live, cached: m.calls.length - live });
           setSelected((s) => s ?? m.session.plan.markets[0]?.code ?? null);
         }
       }, abort.current.signal);
@@ -118,7 +122,10 @@ export function TerritoryApp({ initialInput, summary, source }: Props) {
             <FilmCard input={input} isBusy={Boolean(busy)} hasRun={Boolean(session)} onRun={() => run(input)} onEdit={() => setIsEditing(true)} />
           )}
           {error && <p role="alert" className="panel border-ember/60 p-4 text-sm text-ember">{error}</p>}
-          <TracePanel events={trace} isRunning={Boolean(busy)} startedAt={startedAt} />
+          <TracePanel events={trace} isRunning={Boolean(busy)} startedAt={startedAt} lastCalls={lastCalls} />
+          {session && session.context && !busy && (
+            <a href="#reality-shock" className="btn-primary w-full justify-center">Next: break the plan in the War Room ↓</a>
+          )}
         </div>
 
         <div className="space-y-5">
@@ -191,10 +198,10 @@ function FilmCard({ input, isBusy, hasRun, onRun, onEdit }: { input: AgentInput;
         <div><dt className="text-bone-faint">Candidates</dt><dd className="text-bone">{input.targetMarkets.length} markets</dd></div>
       </dl>
       <div className="mt-5 flex flex-wrap gap-2">
-        <button type="button" className="btn-primary" disabled={isBusy} onClick={onRun}>{isBusy ? "Researching…" : hasRun ? "Re-run research" : "Run live research"}</button>
+        <button type="button" className="btn-primary" disabled={isBusy} onClick={onRun}>{isBusy ? "Researching…" : hasRun ? "Re-run research" : "Run research"}</button>
         <button type="button" className="btn" disabled={isBusy} onClick={onEdit}>Edit brief</button>
       </div>
-      <p className="mt-3 text-[0.7rem] text-bone-faint">Real Qloo calls. A first run takes ~40 s; repeat runs use the private cache and finish in a few seconds.</p>
+      <p className="mt-3 text-[0.7rem] text-bone-faint">The showcase brief is answered in ~2 s from a private cache of earlier live Qloo responses. Edit the brief to research your own film live (~40 s, real Qloo calls). The activity log reports exactly which.</p>
     </article>
   );
 }

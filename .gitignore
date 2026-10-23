@@ -49,3 +49,6 @@ next-env.d.ts
 # Playwright
 /test-results/
 /playwright-report/
+
+# Submission screenshots show Qloo-derived titles; kept out of git
+/submission/
