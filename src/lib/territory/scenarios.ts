@@ -6,7 +6,7 @@ export const DEFAULT_COSTS: AgentInput["costs"] = {
   French: { subtitleUsd: 3500, dubUsd: 32000 }, German: { subtitleUsd: 3500, dubUsd: 32000 }, Spanish: { subtitleUsd: 3000, dubUsd: 26000 },
   Korean: { subtitleUsd: 4000, dubUsd: 30000 }, Japanese: { subtitleUsd: 4500, dubUsd: 36000 }, Portuguese: { subtitleUsd: 3000, dubUsd: 24000 },
   Italian: { subtitleUsd: 3200, dubUsd: 28000 }, Polish: { subtitleUsd: 2500, dubUsd: 20000 }, Swedish: { subtitleUsd: 2800, dubUsd: 22000 },
-  Hindi: { subtitleUsd: 2500, dubUsd: 18000 }, Turkish: { subtitleUsd: 2500, dubUsd: 18000 }, Indonesian: { subtitleUsd: 2500, dubUsd: 16000 },
+  Hindi: { subtitleUsd: 2500, dubUsd: 18000 }, Dutch: { subtitleUsd: 2500, dubUsd: 20000 }, Turkish: { subtitleUsd: 2500, dubUsd: 18000 }, Indonesian: { subtitleUsd: 2500, dubUsd: 16000 },
 };
 
 export const SHOWCASE_INPUT: AgentInput = {

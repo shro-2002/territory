@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { replan, runAgent } from "@/lib/agent/agent";
+import { LIMITS, replan, runAgent } from "@/lib/agent/agent";
 import { assertClaimsGrounded } from "@/lib/agent/claims";
 import { pickCandidate } from "@/lib/agent/resolve";
 import { QlooClient } from "@/lib/qloo/client";
 import { createMockFetch, MOCK_PREFIX } from "@/lib/qloo/mock";
+import { MARKETS } from "@/lib/territory/markets";
 
-const client = () => new QlooClient({ apiKey: "mock", source: "mock", fetchImpl: createMockFetch(), sleep: async () => {} });
+const client = () => new QlooClient({ apiKey: "mock", source: "mock", fetchImpl: createMockFetch(), sleep: async () => {}, callBudget: LIMITS.maxQlooCalls * 2 });
 
 const input = {
   title: "Paper Lanterns (working title)",
@@ -90,7 +91,8 @@ describe("replan (Distribution War Room)", () => {
     const s2 = await replan(s1, { excludedMarkets: [target.code] }, { client: c });
 
     const rev = s2.revisions.at(-1)!;
-    expect(rev.invalidated.some((x) => x.startsWith(target.code))).toBe(true);
+    expect(rev.invalidated.some((x) => x.startsWith(target.name))).toBe(true);
+    expect(rev.decisions.map((d) => d.action)).toContain("research_reserve_markets");
     expect(rev.reusedMarkets.sort()).toEqual(Object.keys(s1.research).sort());
     expect(rev.newlyResearched.length).toBeGreaterThan(0);
     // Each new market costs comps + every usable reference baseline, 2 pages each; reused markets cost nothing.
@@ -117,5 +119,26 @@ describe("replan (Distribution War Room)", () => {
     const s2 = await replan(s1, { subtitleFirst: true }, { client: c });
     expect(s2.plan.markets.every((m) => m.mode !== "dub")).toBe(true);
     expect(s2.violations).toEqual([]);
+  });
+
+  it("researches same-language reserves first when a localized market is lost", async () => {
+    const c = client();
+    const s1 = await runAgent({ ...input, targetMarkets: ["US", "GB", "FR", "ES", "MX", "DE"] }, { client: c });
+    const lost = s1.plan.markets.find((m) => m.language === "Spanish") ?? s1.plan.markets.find((m) => m.mode !== "original")!;
+    const s2 = await replan(s1, { excludedMarkets: [lost.code] }, { client: c });
+    const first = s2.revisions.at(-1)!.newlyResearched[0];
+    expect(MARKETS.find((m) => m.code === first)?.language).toBe(lost.language === "Spanish" || lost.language === "German" ? lost.language : expect.any(String));
+  });
+
+  it("a budget cut chooses not to research and tags changes as cost-driven", async () => {
+    const c = client();
+    const s1 = await runAgent({ ...input, constraints: { budgetUsd: 150000, maxMarkets: 5 } }, { client: c });
+    const s2 = await replan(s1, { budgetUsd: 20000 }, { client: c });
+    const rev = s2.revisions.at(-1)!;
+    expect(rev.decisions.map((d) => d.action)).toEqual(["reuse_evidence", "skip_research"]);
+    const drivers = rev.changes.filter((ch) => ch.driver !== "summary").map((ch) => ch.driver);
+    expect(drivers.length).toBeGreaterThan(0);
+    expect(drivers.every((d) => d === "cost" || d === "cultural-evidence")).toBe(true);
+    expect(drivers).toContain("cost");
   });
 });

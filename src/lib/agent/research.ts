@@ -91,7 +91,7 @@ export async function researchMarket(client: QlooClient, code: string, ctx: Rese
     };
   } catch (err) {
     const reason = err instanceof QlooError ? `${err.code}: ${err.message}` : String(err);
-    return { code, compIds: ctx.compIds, callIds: [], referencePortabilities: {}, localNeighbours: [], localNeighbourIds: [], score: null, overlap: 0, portability: 0, baselinePortability: null, insufficientReason: `query failed (${reason})` };
+    return { code, compIds: ctx.compIds, callIds: [], referencePortabilities: {}, localNeighbours: [], localNeighbourIds: [], score: null, overlap: 0, portability: 0, baselinePortability: null, scoreRange: null, confidence: null, insufficientReason: `query failed (${reason})` };
   }
 }
 

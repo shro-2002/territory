@@ -27,6 +27,10 @@ export const MARKETS: Market[] = [
   { code: "IN", iso: "356", locationQuery: "India", name: "India", language: "Hindi" },
   { code: "PL", iso: "616", locationQuery: "Poland", name: "Poland", language: "Polish" },
   { code: "SE", iso: "752", locationQuery: "Sweden", name: "Sweden", language: "Swedish" },
+  { code: "AT", iso: "040", locationQuery: "Austria", name: "Austria", language: "German" },
+  { code: "PT", iso: "620", locationQuery: "Portugal", name: "Portugal", language: "Portuguese" },
+  { code: "CO", iso: "170", locationQuery: "Colombia", name: "Colombia", language: "Spanish" },
+  { code: "NL", iso: "528", locationQuery: "Netherlands", name: "Netherlands", language: "Dutch" },
   { code: "TR", iso: "792", locationQuery: "Turkey", name: "Turkey", language: "Turkish" },
   { code: "ID", iso: "360", locationQuery: "Indonesia", name: "Indonesia", language: "Indonesian" },
 ];

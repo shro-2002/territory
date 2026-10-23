@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { Session } from "@/lib/agent/agent";
+import type { ChangeDriver, Session } from "@/lib/agent/agent";
 import { marketByCode } from "@/lib/territory/markets";
 import type { Constraints, Plan } from "@/lib/territory/planner";
 
@@ -174,24 +174,58 @@ function RevisionCompare({ previous, current }: { previous: Session; current: Se
           </div>
         ))}
       </div>
-      <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+      <dl className="mt-4 grid gap-4 text-sm md:grid-cols-2">
         <div>
-          <dt className="eyebrow mb-1">Invalidated decisions</dt>
-          <dd className="text-bone-dim">{rev.invalidated.length ? rev.invalidated.join("; ") : "None — the change only re-optimized existing choices."}</dd>
+          <dt className="eyebrow mb-1">1 · Impact analysis</dt>
+          <dd className="text-bone-dim">{rev.invalidated.length ? rev.invalidated.join("; ") : "No decision invalidated — the change only re-optimizes existing choices."}</dd>
         </div>
         <div>
-          <dt className="eyebrow mb-1">Evidence</dt>
-          <dd className="text-bone-dim">Reused research for {rev.reusedMarkets.length} markets (no new Qloo calls). {rev.newlyResearched.length ? `Newly researched: ${rev.newlyResearched.map((c) => marketByCode(c).name).join(", ")}.` : "No new research needed."}</dd>
+          <dt className="eyebrow mb-1">2 · Evidence ledger</dt>
+          <dd className="space-y-1 text-bone-dim">
+            <p><span className="text-ok">Still valid, reused:</span> {rev.reusedMarkets.filter((c) => !rev.retainedUnusable.includes(c)).map((c) => marketByCode(c).name).join(", ")} — no new Qloo calls.</p>
+            {rev.retainedUnusable.length > 0 && <p><span className="text-ember">Valid but unusable:</span> {rev.retainedUnusable.map((c) => marketByCode(c).name).join(", ")} (excluded; evidence kept for reference).</p>}
+            <p><span className="text-amber">Newly researched:</span> {rev.newlyResearched.length ? rev.newlyResearched.map((c) => marketByCode(c).name).join(", ") : "none needed"}.</p>
+          </dd>
         </div>
         <div className="md:col-span-2">
-          <dt className="eyebrow mb-1">What changed and why</dt>
+          <dt className="eyebrow mb-1">3 · Agent tool decisions</dt>
           <dd>
-            <ul className="list-disc space-y-0.5 pl-5 text-bone">
-              {rev.changes.map((ch) => <li key={ch}>{ch}</li>)}
+            <ul className="space-y-1 text-bone-dim">
+              {rev.decisions.map((d, i) => (
+                <li key={i}><span className="font-mono text-[0.7rem] text-amber">{d.action}</span> — {d.reason}</li>
+              ))}
+            </ul>
+          </dd>
+        </div>
+        <div className="md:col-span-2">
+          <dt className="eyebrow mb-1">4 · What changed and why</dt>
+          <dd>
+            <ul className="space-y-1.5">
+              {rev.changes.map((ch) => (
+                <li key={ch.text} className="flex items-start gap-2 text-bone">
+                  {ch.driver !== "summary" && <DriverTag driver={ch.driver} />}
+                  <span className={ch.driver === "summary" ? "text-bone-dim" : ""}>{ch.text}</span>
+                </li>
+              ))}
             </ul>
           </dd>
         </div>
       </dl>
     </div>
+  );
+}
+
+const DRIVER: Record<ChangeDriver, { label: string; color: string }> = {
+  "cultural-evidence": { label: "Qloo evidence", color: "var(--prov-qloo)" },
+  cost: { label: "Cost", color: "var(--prov-external)" },
+  constraint: { label: "Your constraint", color: "var(--prov-user)" },
+};
+
+function DriverTag({ driver }: { driver: ChangeDriver }) {
+  const d = DRIVER[driver];
+  return (
+    <span className="mt-0.5 inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider" style={{ color: d.color, borderColor: `color-mix(in oklab, ${d.color} 55%, transparent)` }}>
+      {d.label}
+    </span>
   );
 }

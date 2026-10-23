@@ -51,16 +51,35 @@ export interface Session {
   revisions: Revision[];
 }
 
+/** What drove a change: Qloo taste evidence, money, or a hard user constraint. */
+export type ChangeDriver = "cultural-evidence" | "cost" | "constraint";
+
+export interface PlanChange {
+  text: string;
+  driver: ChangeDriver | "summary";
+}
+
+/** One agent decision about which tool to use (or not) during a revision, with its reason. */
+export interface ToolDecision {
+  action: "reuse_evidence" | "research_reserve_markets" | "skip_research";
+  reason: string;
+  markets?: string[];
+}
+
 export interface Revision {
   version: number;
   constraints: Constraints;
   invalidated: string[];
   reusedMarkets: string[];
   newlyResearched: string[];
-  changes: string[];
+  /** Prior evidence that is still valid but no longer usable (e.g. excluded market). */
+  retainedUnusable: string[];
+  decisions: ToolDecision[];
+  changes: PlanChange[];
 }
 
-export const LIMITS = { maxQlooCalls: 160, maxReserveResearch: 3, maxFallbackMarkets: 4 } as const;
+// Worst case: 12 markets x 10 calls + comps/baselines + fallback retries ≈ 200.
+export const LIMITS = { maxQlooCalls: 220, maxReserveResearch: 3, maxFallbackMarkets: 4 } as const;
 
 class Tracer {
   readonly events: TraceEvent[] = [];
@@ -182,66 +201,98 @@ function failedSession(input: AgentInput, comps: ResolvedComp[], t: Tracer): Ses
  */
 export async function replan(session: Session, patch: Partial<Constraints>, { client, onEvent }: AgentDeps): Promise<Session> {
   const t = new Tracer(client, onEvent);
+  if (!session.context) throw new Error("Cannot replan a session whose research failed");
   const before = session.input.constraints;
   const after = ConstraintsSchema.parse({ ...before, ...patch });
   const input = { ...session.input, constraints: after };
+  const usable = (m: { code: string; language: string }) => !after.excludedMarkets.includes(m.code) && !(m.language !== input.originalLanguage && after.excludedLanguages.includes(m.language));
 
   const invalidated: string[] = [];
   for (const m of session.plan.markets) {
-    if (after.excludedMarkets.includes(m.code)) invalidated.push(`${m.code}: market now excluded`);
-    if (m.language !== input.originalLanguage && after.excludedLanguages.includes(m.language)) invalidated.push(`${m.code}: ${m.language} now excluded`);
-    if (after.subtitleFirst && m.mode === "dub") invalidated.push(`${m.code}: dub not allowed under subtitle-first`);
+    if (after.excludedMarkets.includes(m.code)) invalidated.push(`${m.name}: market now excluded`);
+    else if (m.language !== input.originalLanguage && after.excludedLanguages.includes(m.language)) invalidated.push(`${m.name}: ${m.language} now excluded`);
+    else if (after.subtitleFirst && m.mode === "dub") invalidated.push(`${m.name}: dub not allowed under subtitle-first`);
   }
-  if (after.budgetUsd < session.plan.totalCostUsd) invalidated.push(`budget $${after.budgetUsd.toLocaleString("en-US")} below current spend $${session.plan.totalCostUsd.toLocaleString("en-US")}`);
-  if (after.maxMarkets < session.plan.markets.length) invalidated.push(`market cap ${after.maxMarkets} below current ${session.plan.markets.length}`);
-  t.log("IMPACT_ANALYSIS", invalidated.length ? `Invalidated: ${invalidated.join("; ")}. Kept research for ${Object.keys(session.research).length} markets.` : "No current decision is invalidated; re-optimizing under the new constraints only.");
+  if (after.budgetUsd < session.plan.totalCostUsd) invalidated.push(`spend $${session.plan.totalCostUsd.toLocaleString("en-US")} exceeds new budget $${after.budgetUsd.toLocaleString("en-US")}`);
+  if (after.maxMarkets < session.plan.markets.length) invalidated.push(`${session.plan.markets.length} markets exceed new cap of ${after.maxMarkets}`);
+  // Evidence is about taste, so constraint changes never invalidate it; excluded markets keep valid but unusable evidence.
+  const researched = Object.keys(session.research);
+  const retainedUnusable = researched.filter((c) => !usable(marketByCode(c)));
+  t.log("IMPACT_ANALYSIS", `${invalidated.length ? `Invalidated: ${invalidated.join("; ")}.` : "No current decision is invalidated."} Evidence for all ${researched.length} researched markets stays valid (taste evidence does not depend on budget or exclusions)${retainedUnusable.length ? `; ${retainedUnusable.join(", ")} retained but unusable` : ""}.`);
 
+  const decisions: ToolDecision[] = [{ action: "reuse_evidence", reason: "constraint changes do not alter Qloo taste evidence", markets: researched.filter((c) => !retainedUnusable.includes(c)) }];
+  const lost = session.plan.markets.filter((m) => !usable(m));
+  const usableCandidates = researched.filter((c) => !retainedUnusable.includes(c) && session.research[c].score !== null);
+  const needMore = lost.length > 0 && usableCandidates.length < after.maxMarkets + lost.length;
   const research = { ...session.research };
-  const lostSlots = session.plan.markets.filter((m) => after.excludedMarkets.includes(m.code) || (m.language !== input.originalLanguage && after.excludedLanguages.includes(m.language))).length;
-  const newlyResearched: string[] = [];
-  if (lostSlots > 0) {
-    const reserves = session.context ? reserveMarkets(session, after) : [];
-    if (session.context) await researchMarkets(client, reserves, session.context, research, (r) => t.log("SELECTIVE_RESEARCH", `Reserve ${marketLine(r)}`, "progress", r.code));
-    newlyResearched.push(...reserves);
-    t.log("SELECTIVE_RESEARCH", reserves.length ? `${lostSlots} planned market(s) lost; researched reserves ${reserves.join(", ")} (languages already in plan first).` : "No unresearched reserve markets remain.");
+  let newlyResearched: string[] = [];
+  if (lost.length === 0) {
+    decisions.push({ action: "skip_research", reason: "no planned market was removed; the change only needs re-optimization over existing evidence" });
   } else {
-    t.log("SELECTIVE_RESEARCH", "No planned market was removed; no new Qloo research needed.");
+    const reserves = rankReserves(session, after, lost).slice(0, LIMITS.maxReserveResearch);
+    if (reserves.length === 0) decisions.push({ action: "skip_research", reason: "no unresearched reserve market is eligible under the new constraints" });
+    else {
+      decisions.push({ action: "research_reserve_markets", reason: `${lost.map((m) => m.name).join(", ")} lost${needMore ? " and too few eligible researched markets remain" : ""}; replacements ranked by ${reserves.map((r) => `${marketByCode(r.code).name} (${r.why})`).join(", ")}`, markets: reserves.map((r) => r.code) });
+      newlyResearched = reserves.map((r) => r.code);
+      await researchMarkets(client, newlyResearched, session.context, research, (r) => t.log("SELECTIVE_RESEARCH", `Reserve ${marketLine(r)}`, "progress", r.code));
+    }
   }
+  t.log("SELECTIVE_RESEARCH", decisions.slice(1).map((d) => `${d.action === "skip_research" ? "No new Qloo research" : `Researched ${d.markets!.join(", ")}`}: ${d.reason}.`).join(" "));
 
-  if (!session.context) throw new Error("Cannot replan a session whose research failed");
   const revised = finish(input, session.comps, session.context, research, t, client, session.revisions, session.version + 1);
-  const changes = diffPlans(session.plan, revised.plan, after);
-  const revision: Revision = { version: revised.version, constraints: after, invalidated, reusedMarkets: Object.keys(session.research), newlyResearched, changes };
+  const changes = diffPlans(session.plan, revised.plan, { before, after, newlyResearched });
+  const revision: Revision = { version: revised.version, constraints: after, invalidated, reusedMarkets: researched, newlyResearched, retainedUnusable, decisions, changes };
   return { ...revised, trace: [...session.trace, ...revised.trace], revisions: [...session.revisions, revision] };
 }
 
-function reserveMarkets(session: Session, after: Constraints): string[] {
-  const plannedLangs = new Set(session.plan.markets.map((m) => m.language));
-  return MARKETS.filter((m) => !session.research[m.code] && !after.excludedMarkets.includes(m.code) && !after.excludedLanguages.includes(m.language))
-    .sort((a, b) => Number(plannedLangs.has(b.language)) - Number(plannedLangs.has(a.language)) || a.code.localeCompare(b.code))
-    .slice(0, LIMITS.maxReserveResearch)
-    .map((m) => m.code);
+/**
+ * Which unresearched markets could replace what was lost. Conditional on the loss:
+ * same language as a lost market first (audience and localization carry over), then languages
+ * already paid for in the plan, then the film's original language (no localization cost).
+ */
+function rankReserves(session: Session, after: Constraints, lost: Array<{ language: string }>): Array<{ code: string; why: string }> {
+  const lostLangs = new Set(lost.map((m) => m.language));
+  const paidLangs = new Set(session.plan.markets.filter((m) => m.mode !== "original" && !lostLangs.has(m.language)).map((m) => m.language));
+  const original = session.input.originalLanguage;
+  const tier = (lang: string) => (lostLangs.has(lang) && !after.excludedLanguages.includes(lang) ? 0 : paidLangs.has(lang) ? 1 : lang === original ? 2 : 3);
+  const WHY = ["same language as the lost market", "language already paid for", "original language, no localization cost", "other eligible market"];
+  return MARKETS.filter((m) => !session.research[m.code] && !after.excludedMarkets.includes(m.code) && !(m.language !== original && after.excludedLanguages.includes(m.language)))
+    .map((m) => ({ code: m.code, tier: tier(m.language) }))
+    .sort((a, b) => a.tier - b.tier || a.code.localeCompare(b.code))
+    .map((r) => ({ code: r.code, why: WHY[r.tier] }));
 }
 
-export function diffPlans(prev: Plan, next: Plan, after?: Constraints): string[] {
-  const changes: string[] = [];
+export function diffPlans(prev: Plan, next: Plan, ctx?: { before: Constraints; after: Constraints; newlyResearched: string[] }): PlanChange[] {
+  const changes: PlanChange[] = [];
   const p = new Map(prev.markets.map((m) => [m.code, m]));
   const n = new Map(next.markets.map((m) => [m.code, m]));
-  const why = (m: Plan["markets"][number]) => {
-    if (after?.excludedMarkets.includes(m.code)) return "market excluded";
-    if (after?.excludedLanguages.includes(m.language)) return `${m.language} excluded`;
-    if (next.excluded.some((e) => e.code === m.code && e.reason !== "outside top candidates")) return next.excluded.find((e) => e.code === m.code)!.reason;
-    return "outscored by a better-value combination under the new constraints";
-  };
-  for (const [code, m] of p) if (!n.has(code)) changes.push(`Dropped ${m.name} — ${why(m)}`);
+  const tighterBudget = ctx ? ctx.after.budgetUsd < ctx.before.budgetUsd : false;
+  const tighterCap = ctx ? ctx.after.maxMarkets < ctx.before.maxMarkets : false;
+  const paidBefore = new Set(prev.languages.map((l) => l.language));
+  for (const [code, m] of p) {
+    if (n.has(code)) continue;
+    const excluded = next.excluded.find((e) => e.code === code);
+    if (ctx?.after.excludedMarkets.includes(code) || ctx?.after.excludedLanguages.includes(m.language)) changes.push({ text: `Dropped ${m.name} — ${excluded?.reason ?? "excluded"}`, driver: "constraint" });
+    else if (tighterCap) changes.push({ text: `Dropped ${m.name} — lowest value under the tighter ${ctx!.after.maxMarkets}-market cap`, driver: "constraint" });
+    else if (tighterBudget) changes.push({ text: `Dropped ${m.name} — after the budget cut, ${m.language} localization buys less value than the alternatives`, driver: "cost" });
+    else changes.push({ text: `Dropped ${m.name} — outscored by a market with stronger taste evidence`, driver: "cultural-evidence" });
+  }
   for (const [code, m] of n) {
     const old = p.get(code);
-    const cost = m.mode === "original" ? "no localization cost" : `${m.mode} ${m.language}`;
-    if (!old) changes.push(`Added ${m.name} — ${m.score.toFixed(2)}× lift, ${cost}`);
-    else if (old.mode !== m.mode) changes.push(`${m.name}: ${old.mode} → ${m.mode}${modeReason(old.mode, m.mode, after)}`);
+    const cost = m.mode === "original" ? "no localization cost" : `${m.mode} in ${m.language}`;
+    if (!old) {
+      const fresh = ctx?.newlyResearched.includes(code);
+      // Zero marginal localization cost (original language, or a language the plan already pays for) under a tighter budget is a cost-driven pick.
+      const freeRide = m.mode === "original" || paidBefore.has(m.language);
+      const driver: ChangeDriver = tighterBudget && freeRide && !fresh ? "cost" : "cultural-evidence";
+      const why = driver === "cost" ? (m.mode === "original" ? "no localization cost" : `${m.language} ${m.mode} already paid for`) : cost;
+      changes.push({ text: `Added ${m.name} — ${m.score.toFixed(2)}× taste lift${fresh ? " (researched for this revision)" : ""}, ${why}`, driver });
+    } else if (old.mode !== m.mode) {
+      changes.push({ text: `${m.name}: ${old.mode} → ${m.mode}${modeReason(old.mode, m.mode, ctx?.after)}`, driver: ctx?.after.subtitleFirst && m.mode === "subtitle" ? "constraint" : "cost" });
+    }
   }
-  if (prev.totalCostUsd !== next.totalCostUsd) changes.push(`Spend $${prev.totalCostUsd.toLocaleString("en-US")} → $${next.totalCostUsd.toLocaleString("en-US")}`);
-  return changes.length ? changes : ["No change: the previous plan remains optimal under the new constraints"];
+  if (prev.totalCostUsd !== next.totalCostUsd) changes.push({ text: `Spend $${prev.totalCostUsd.toLocaleString("en-US")} → $${next.totalCostUsd.toLocaleString("en-US")}`, driver: "summary" });
+  return changes.length ? changes : [{ text: "No change: the previous plan remains optimal under the new constraints", driver: "summary" }];
 }
 
 function modeReason(from: string, to: string, after?: Constraints) {

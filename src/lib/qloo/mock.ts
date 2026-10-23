@@ -15,7 +15,7 @@ export const MOCK_PREFIX = "[MOCK] ";
 
 const SUPPORTED_TYPES = new Set(["artist", "book", "brand", "destination", "movie", "person", "place", "podcast", "tv_show", "video_game"].map((t) => `urn:entity:${t}`).concat("urn:heatmap"));
 
-const KNOWN_LOCALITIES = ["united states", "united kingdom", "france", "germany", "spain", "italy", "brazil", "mexico", "argentina", "japan", "south korea", "india", "nigeria", "australia", "canada", "sweden", "poland", "turkey", "indonesia", "philippines"];
+const KNOWN_LOCALITIES = ["austria", "portugal", "colombia", "netherlands", "united states", "united kingdom", "france", "germany", "spain", "italy", "brazil", "mexico", "argentina", "japan", "south korea", "india", "nigeria", "australia", "canada", "sweden", "poland", "turkey", "indonesia", "philippines"];
 
 const MOCK_CATALOG = [
   "Past Lives", "Minari", "Aftersun", "Parasite", "Drive My Car", "Portrait of a Lady on Fire", "Roma", "The Worst Person in the World",
@@ -23,6 +23,9 @@ const MOCK_CATALOG = [
   "Spirited Away", "Oldboy", "The Lunchbox", "Wadjda", "A Separation", "Y Tu Mamá También", "Toni Erdmann", "Cold War",
   "Titanic", "Inception", "The Dark Knight", "Avatar", "The Godfather", "Interstellar", "La La Land", "Life Is Beautiful",
   "Crouching Tiger, Hidden Dragon", "3 Idiots", "Coco", "The Intouchables", "Your Name",
+  // Reference genre sets (src/lib/territory/markets.ts) so mock runs can build baselines.
+  "Hereditary", "Get Out", "The Witch", "Midsommar", "Bridesmaids", "Superbad", "The Hangover", "Step Brothers",
+  "Moana", "Zootopia", "Encanto", "John Wick", "Mad Max: Fury Road", "The Raid", "Baby Driver",
 ];
 
 function hash01(...parts: string[]): number {

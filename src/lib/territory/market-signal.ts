@@ -18,6 +18,12 @@
 
 export const NEIGHBOURHOOD_SIZE = 100;
 export const MIN_OVERLAP_FOR_SIGNAL = 3;
+export const MIN_REFERENCE_BASELINES = 2;
+// Below this overlap, one title more or less moves the score a lot.
+const LOW_CONFIDENCE_OVERLAP = 8;
+const LOW_CONFIDENCE_RANGE = 0.35;
+
+export type Confidence = "low" | "moderate";
 
 export interface MarketSignal {
   /** Portability lift vs reference genres in the same market; null when evidence is insufficient. */
@@ -27,6 +33,10 @@ export interface MarketSignal {
   baselinePortability: number | null;
   /** Titles in the market's comp neighbourhood that are absent globally: buyer-facing local comps. */
   localNeighbourIds: string[];
+  /** Score range when each reference genre is left out in turn (sensitivity to baseline choice). */
+  scoreRange: [number, number] | null;
+  /** Never "high": the signal is relative and untested against outcomes. */
+  confidence: Confidence | null;
   insufficientReason?: string;
 }
 
@@ -41,12 +51,17 @@ export function computeMarketSignal(globalIds: string[], localIds: string[], ref
   const global = new Set(globalIds);
   const localNeighbourIds = localIds.filter((id) => !global.has(id)).slice(0, 10);
   const usableRefs = referencePortabilities.filter((r) => r > 0);
-  const baselinePortability = usableRefs.length ? usableRefs.reduce((s, r) => s + r, 0) / usableRefs.length : null;
-  const base = { overlap, portability: p, baselinePortability, localNeighbourIds };
+  const mean = (xs: number[]) => xs.reduce((s, r) => s + r, 0) / xs.length;
+  const baselinePortability = usableRefs.length ? mean(usableRefs) : null;
+  const base = { overlap, portability: p, baselinePortability, localNeighbourIds, scoreRange: null, confidence: null };
   if (localIds.length === 0) return { ...base, score: null, insufficientReason: "Qloo returned no titles for the comps in this market" };
   if (overlap < MIN_OVERLAP_FOR_SIGNAL) return { ...base, score: null, insufficientReason: `only ${overlap} of the comps' ${NEIGHBOURHOOD_SIZE} closest titles survive here (need ${MIN_OVERLAP_FOR_SIGNAL})` };
-  if (baselinePortability === null) return { ...base, score: null, insufficientReason: "no reference genre baseline for this market" };
-  return { ...base, score: p / baselinePortability };
+  if (usableRefs.length < MIN_REFERENCE_BASELINES) return { ...base, score: null, insufficientReason: `only ${usableRefs.length} reference genre baseline(s) available (need ${MIN_REFERENCE_BASELINES})` };
+  const score = p / baselinePortability!;
+  const loo = usableRefs.length > 2 ? usableRefs.map((_, i) => p / mean(usableRefs.filter((__, j) => j !== i))) : [score];
+  const scoreRange: [number, number] = [Math.min(...loo), Math.max(...loo)];
+  const confidence: Confidence = overlap < LOW_CONFIDENCE_OVERLAP || scoreRange[1] - scoreRange[0] > LOW_CONFIDENCE_RANGE ? "low" : "moderate";
+  return { ...base, score, scoreRange, confidence };
 }
 
 /** Spearman rank correlation of two equal-length vectors (average ranks for ties). */
