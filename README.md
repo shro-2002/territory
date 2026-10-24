@@ -41,7 +41,8 @@ npm install
 cp .env.example .env.local      # add QLOO_API_KEY (server-side only); leave empty for labelled mock data
 npm run dev                     # http://localhost:3000
 ```
-Checks: `npm test` (49 unit/integration) · `npm run e2e` (Playwright, mock backend) · `npm run typecheck` · `npm run lint` · `npm run build`.
+Checks: `npm test` (80 unit/integration) · `npm run e2e` (Playwright, mock backend) · `npm run typecheck` · `npm run lint` · `npm run build`.
+Local runs ignore any Upstash credentials unless `TERRITORY_REDIS_NAMESPACE` names an isolated keyspace, so tests and dev servers can never spend a deployment's shared quota (see `docs/DEPLOY.md`).
 Experiments (need a key): `npm run experiments` (E1–E5) · `npm run year-window` · `npm run ablation` · `npm run audit-scoring` ·
 `npm run e6` (also needs local Ollama with `qwen3:14b`).
 
