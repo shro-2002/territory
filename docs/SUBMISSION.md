@@ -54,8 +54,8 @@ wrong 9 times in 12. Remove Qloo from Territory and it recommends the same five 
 plans under budget, and when reality hits — a buyer passes, the budget drops — works out what is invalidated, reuses what is still
 valid, researches only the replacements it needs, and explains every change by its driver.
 
-**Qloo's measurable contribution.** Film-specific market choices (identical plans without it), market-specific local comps for
-pitching, every market claim traceable to Qloo requests, and refusal when evidence is absent.
+**Qloo's measurable contribution.** Film-specific market choices (identical plans without it), nearby titles separated into market
+catalogue vs distinctive under same-country genre controls, every market claim traceable to Qloo requests, and refusal when evidence is absent.
 
 **Limits.** Relative cultural overlap, not a forecast; 2018+ location data for films; no outcome validation yet.
 

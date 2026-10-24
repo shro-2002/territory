@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 
-import type { Session } from "@/lib/agent/agent";
+import type { MarketResearch, Session } from "@/lib/agent/agent";
 import type { Provenance } from "@/lib/agent/claims";
 import type { CallRecord } from "@/lib/qloo/types";
 import { NEIGHBOURHOOD_SIZE } from "@/lib/territory/market-signal";
@@ -45,6 +45,12 @@ const PROVENANCE_MEANING: Record<Provenance, string> = {
   insufficient: "We looked and there was not enough data",
   external: "From a non-Qloo source",
 };
+
+function localOriginCell(r: MarketResearch): string {
+  if (r.score === null) return r.insufficientReason ?? "—";
+  if (r.nearby.localOrigin.length) return r.nearby.localOrigin.slice(0, 4).join(", ");
+  return r.nearby.counts.originUnknown ? "None verified (origin not recorded)" : "None found under controls";
+}
 
 export function EvidenceLab({ session, calls, summary, trace, isRunning, startedAt, lastCalls }: Props) {
   return (
@@ -110,7 +116,7 @@ function EvidenceDetail({ session }: { session: Session }) {
       <div className="overflow-x-auto">
         <p className="eyebrow mb-3">Market by market</p>
         <table className="w-full min-w-[40rem] text-left text-sm">
-          <thead className="text-xs text-bone-faint"><tr><th className="pb-2 font-normal">Market</th><th className="pb-2 font-normal">Score</th><th className="pb-2 font-normal">Range</th><th className="pb-2 font-normal">Overlap</th><th className="pb-2 font-normal">Confidence</th><th className="pb-2 font-normal">Local titles from Qloo</th></tr></thead>
+          <thead className="text-xs text-bone-faint"><tr><th className="pb-2 font-normal">Market</th><th className="pb-2 font-normal">Score</th><th className="pb-2 font-normal">Range</th><th className="pb-2 font-normal">Overlap</th><th className="pb-2 font-normal">Confidence</th><th className="pb-2 font-normal">Distinctive local-origin titles</th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.code} className="border-t border-line align-top">
@@ -119,7 +125,7 @@ function EvidenceDetail({ session }: { session: Session }) {
                 <td className="py-2 pr-3 tabular-nums text-bone-dim">{r.scoreRange ? `${r.scoreRange[0].toFixed(2)}–${r.scoreRange[1].toFixed(2)}×` : "—"}</td>
                 <td className="py-2 pr-3 tabular-nums text-bone-dim">{r.overlap}/{NEIGHBOURHOOD_SIZE}</td>
                 <td className="py-2 pr-3 text-bone-dim capitalize">{evidenceOf(r)}</td>
-                <td className="py-2 text-bone-dim">{r.localNeighbours.slice(0, 4).join(", ") || r.insufficientReason || "—"}</td>
+                <td className="py-2 text-bone-dim">{localOriginCell(r)}</td>
               </tr>
             ))}
           </tbody>

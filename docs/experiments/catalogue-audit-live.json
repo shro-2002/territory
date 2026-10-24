@@ -1,0 +1,550 @@
+{
+ "out": {
+  "arthouse-drama": [
+   {
+    "code": "US",
+    "score": 1.11,
+    "range": [
+     0.97,
+     1.46
+    ],
+    "confidence": "low",
+    "overlap": 20,
+    "overlapGeneric": 8,
+    "overlapGenericShare": 0.4,
+    "neighbourhoodGenericShare": 0.73,
+    "portability": 0.2,
+    "refMean": 0.18,
+    "residualOverlap": 12,
+    "residualRefMean": 12.75,
+    "residualScore": 0.94
+   },
+   {
+    "code": "GB",
+    "score": 0.91,
+    "range": [
+     0.76,
+     1.14
+    ],
+    "confidence": "low",
+    "overlap": 22,
+    "overlapGeneric": 9,
+    "overlapGenericShare": 0.41,
+    "neighbourhoodGenericShare": 0.56,
+    "portability": 0.22,
+    "refMean": 0.24,
+    "residualOverlap": 13,
+    "residualRefMean": 10.75,
+    "residualScore": 1.21
+   },
+   {
+    "code": "FR",
+    "score": 0.76,
+    "range": [
+     0.61,
+     0.94
+    ],
+    "confidence": "moderate",
+    "overlap": 15,
+    "overlapGeneric": 8,
+    "overlapGenericShare": 0.53,
+    "neighbourhoodGenericShare": 0.81,
+    "portability": 0.15,
+    "refMean": 0.2,
+    "residualOverlap": 7,
+    "residualRefMean": 9.75,
+    "residualScore": 0.72
+   },
+   {
+    "code": "DE",
+    "score": 0.96,
+    "range": [
+     0.77,
+     1.2
+    ],
+    "confidence": "low",
+    "overlap": 20,
+    "overlapGeneric": 11,
+    "overlapGenericShare": 0.55,
+    "neighbourhoodGenericShare": 0.67,
+    "portability": 0.2,
+    "refMean": 0.21,
+    "residualOverlap": 9,
+    "residualRefMean": 10.25,
+    "residualScore": 0.88
+   },
+   {
+    "code": "ES",
+    "score": 0.96,
+    "range": [
+     0.77,
+     1.27
+    ],
+    "confidence": "low",
+    "overlap": 19,
+    "overlapGeneric": 8,
+    "overlapGenericShare": 0.42,
+    "neighbourhoodGenericShare": 0.68,
+    "portability": 0.19,
+    "refMean": 0.2,
+    "residualOverlap": 11,
+    "residualRefMean": 10,
+    "residualScore": 1.1
+   },
+   {
+    "code": "MX",
+    "score": 0.73,
+    "range": [
+     0.61,
+     0.86
+    ],
+    "confidence": "moderate",
+    "overlap": 19,
+    "overlapGeneric": 6,
+    "overlapGenericShare": 0.32,
+    "neighbourhoodGenericShare": 0.64,
+    "portability": 0.19,
+    "refMean": 0.26,
+    "residualOverlap": 13,
+    "residualRefMean": 11,
+    "residualScore": 1.18
+   },
+   {
+    "code": "KR",
+    "score": 0.69,
+    "range": [
+     0.54,
+     0.92
+    ],
+    "confidence": "low",
+    "overlap": 12,
+    "overlapGeneric": 4,
+    "overlapGenericShare": 0.33,
+    "neighbourhoodGenericShare": 0.77,
+    "portability": 0.12,
+    "refMean": 0.18,
+    "residualOverlap": 8,
+    "residualRefMean": 6.25,
+    "residualScore": 1.28
+   },
+   {
+    "code": "JP",
+    "score": 0.62,
+    "range": [
+     0.49,
+     0.78
+    ],
+    "confidence": "moderate",
+    "overlap": 12,
+    "overlapGeneric": 4,
+    "overlapGenericShare": 0.33,
+    "neighbourhoodGenericShare": 0.69,
+    "portability": 0.12,
+    "refMean": 0.2,
+    "residualOverlap": 8,
+    "residualRefMean": 9.75,
+    "residualScore": 0.82
+   },
+   {
+    "code": "BR",
+    "score": 0.57,
+    "range": [
+     0.45,
+     0.67
+    ],
+    "confidence": "moderate",
+    "overlap": 11,
+    "overlapGeneric": 5,
+    "overlapGenericShare": 0.45,
+    "neighbourhoodGenericShare": 0.79,
+    "portability": 0.11,
+    "refMean": 0.19,
+    "residualOverlap": 6,
+    "residualRefMean": 8.5,
+    "residualScore": 0.71
+   }
+  ],
+  "crime-thriller": [
+   {
+    "code": "US",
+    "score": 1.22,
+    "range": [
+     1.06,
+     1.61
+    ],
+    "confidence": "low",
+    "overlap": 22,
+    "overlapGeneric": 18,
+    "overlapGenericShare": 0.82,
+    "neighbourhoodGenericShare": 0.88,
+    "portability": 0.22,
+    "refMean": 0.18,
+    "residualOverlap": 4,
+    "residualRefMean": 12.75,
+    "residualScore": 0.31
+   },
+   {
+    "code": "GB",
+    "score": 0.87,
+    "range": [
+     0.72,
+     1.09
+    ],
+    "confidence": "low",
+    "overlap": 21,
+    "overlapGeneric": 21,
+    "overlapGenericShare": 1,
+    "neighbourhoodGenericShare": 0.91,
+    "portability": 0.21,
+    "refMean": 0.24,
+    "residualOverlap": 0,
+    "residualRefMean": 10.75,
+    "residualScore": 0
+   },
+   {
+    "code": "FR",
+    "score": 0.81,
+    "range": [
+     0.65,
+     1
+    ],
+    "confidence": "low",
+    "overlap": 16,
+    "overlapGeneric": 13,
+    "overlapGenericShare": 0.81,
+    "neighbourhoodGenericShare": 0.93,
+    "portability": 0.16,
+    "refMean": 0.2,
+    "residualOverlap": 3,
+    "residualRefMean": 9.75,
+    "residualScore": 0.31
+   },
+   {
+    "code": "DE",
+    "score": 0.96,
+    "range": [
+     0.77,
+     1.2
+    ],
+    "confidence": "low",
+    "overlap": 20,
+    "overlapGeneric": 15,
+    "overlapGenericShare": 0.75,
+    "neighbourhoodGenericShare": 0.9,
+    "portability": 0.2,
+    "refMean": 0.21,
+    "residualOverlap": 5,
+    "residualRefMean": 10.25,
+    "residualScore": 0.49
+   },
+   {
+    "code": "ES",
+    "score": 0.86,
+    "range": [
+     0.69,
+     1.13
+    ],
+    "confidence": "low",
+    "overlap": 17,
+    "overlapGeneric": 12,
+    "overlapGenericShare": 0.71,
+    "neighbourhoodGenericShare": 0.87,
+    "portability": 0.17,
+    "refMean": 0.2,
+    "residualOverlap": 5,
+    "residualRefMean": 10,
+    "residualScore": 0.5
+   },
+   {
+    "code": "MX",
+    "score": 0.85,
+    "range": [
+     0.71,
+     1
+    ],
+    "confidence": "moderate",
+    "overlap": 22,
+    "overlapGeneric": 17,
+    "overlapGenericShare": 0.77,
+    "neighbourhoodGenericShare": 0.91,
+    "portability": 0.22,
+    "refMean": 0.26,
+    "residualOverlap": 5,
+    "residualRefMean": 11,
+    "residualScore": 0.45
+   },
+   {
+    "code": "KR",
+    "score": 0.8,
+    "range": [
+     0.63,
+     1.08
+    ],
+    "confidence": "low",
+    "overlap": 14,
+    "overlapGeneric": 11,
+    "overlapGenericShare": 0.79,
+    "neighbourhoodGenericShare": 0.93,
+    "portability": 0.14,
+    "refMean": 0.18,
+    "residualOverlap": 3,
+    "residualRefMean": 6.25,
+    "residualScore": 0.48
+   },
+   {
+    "code": "JP",
+    "score": 0.92,
+    "range": [
+     0.73,
+     1.17
+    ],
+    "confidence": "low",
+    "overlap": 18,
+    "overlapGeneric": 12,
+    "overlapGenericShare": 0.67,
+    "neighbourhoodGenericShare": 0.89,
+    "portability": 0.18,
+    "refMean": 0.2,
+    "residualOverlap": 6,
+    "residualRefMean": 9.75,
+    "residualScore": 0.62
+   },
+   {
+    "code": "BR",
+    "score": 0.99,
+    "range": [
+     0.78,
+     1.16
+    ],
+    "confidence": "low",
+    "overlap": 19,
+    "overlapGeneric": 16,
+    "overlapGenericShare": 0.84,
+    "neighbourhoodGenericShare": 0.93,
+    "portability": 0.19,
+    "refMean": 0.19,
+    "residualOverlap": 3,
+    "residualRefMean": 8.5,
+    "residualScore": 0.35
+   }
+  ],
+  "spanish-coming-of-age": [
+   {
+    "code": "US",
+    "score": 0.61,
+    "range": [
+     0.53,
+     0.8
+    ],
+    "confidence": "moderate",
+    "overlap": 11,
+    "overlapGeneric": 4,
+    "overlapGenericShare": 0.36,
+    "neighbourhoodGenericShare": 0.7,
+    "portability": 0.11,
+    "refMean": 0.18,
+    "residualOverlap": 7,
+    "residualRefMean": 12.75,
+    "residualScore": 0.55
+   },
+   {
+    "code": "GB",
+    "score": 0.62,
+    "range": [
+     0.52,
+     0.78
+    ],
+    "confidence": "moderate",
+    "overlap": 15,
+    "overlapGeneric": 6,
+    "overlapGenericShare": 0.4,
+    "neighbourhoodGenericShare": 0.64,
+    "portability": 0.15,
+    "refMean": 0.24,
+    "residualOverlap": 9,
+    "residualRefMean": 10.75,
+    "residualScore": 0.84
+   },
+   {
+    "code": "FR",
+    "score": 0.61,
+    "range": [
+     0.49,
+     0.75
+    ],
+    "confidence": "moderate",
+    "overlap": 12,
+    "overlapGeneric": 6,
+    "overlapGenericShare": 0.5,
+    "neighbourhoodGenericShare": 0.84,
+    "portability": 0.12,
+    "refMean": 0.2,
+    "residualOverlap": 6,
+    "residualRefMean": 9.75,
+    "residualScore": 0.62
+   },
+   {
+    "code": "DE",
+    "score": 0.58,
+    "range": [
+     0.46,
+     0.72
+    ],
+    "confidence": "moderate",
+    "overlap": 12,
+    "overlapGeneric": 8,
+    "overlapGenericShare": 0.67,
+    "neighbourhoodGenericShare": 0.73,
+    "portability": 0.12,
+    "refMean": 0.21,
+    "residualOverlap": 4,
+    "residualRefMean": 10.25,
+    "residualScore": 0.39
+   },
+   {
+    "code": "ES",
+    "score": 0.76,
+    "range": [
+     0.61,
+     1
+    ],
+    "confidence": "low",
+    "overlap": 15,
+    "overlapGeneric": 10,
+    "overlapGenericShare": 0.67,
+    "neighbourhoodGenericShare": 0.76,
+    "portability": 0.15,
+    "refMean": 0.2,
+    "residualOverlap": 5,
+    "residualRefMean": 10,
+    "residualScore": 0.5
+   },
+   {
+    "code": "MX",
+    "score": 0.65,
+    "range": [
+     0.55,
+     0.77
+    ],
+    "confidence": "moderate",
+    "overlap": 17,
+    "overlapGeneric": 6,
+    "overlapGenericShare": 0.35,
+    "neighbourhoodGenericShare": 0.71,
+    "portability": 0.17,
+    "refMean": 0.26,
+    "residualOverlap": 11,
+    "residualRefMean": 11,
+    "residualScore": 1
+   },
+   {
+    "code": "KR",
+    "score": 0.51,
+    "range": [
+     0.4,
+     0.69
+    ],
+    "confidence": "moderate",
+    "overlap": 9,
+    "overlapGeneric": 9,
+    "overlapGenericShare": 1,
+    "neighbourhoodGenericShare": 0.86,
+    "portability": 0.09,
+    "refMean": 0.18,
+    "residualOverlap": 0,
+    "residualRefMean": 6.25,
+    "residualScore": 0
+   },
+   {
+    "code": "JP",
+    "score": 0.51,
+    "range": [
+     0.41,
+     0.65
+    ],
+    "confidence": "moderate",
+    "overlap": 10,
+    "overlapGeneric": 8,
+    "overlapGenericShare": 0.8,
+    "neighbourhoodGenericShare": 0.76,
+    "portability": 0.1,
+    "refMean": 0.2,
+    "residualOverlap": 2,
+    "residualRefMean": 9.75,
+    "residualScore": 0.21
+   },
+   {
+    "code": "BR",
+    "score": 0.57,
+    "range": [
+     0.45,
+     0.67
+    ],
+    "confidence": "moderate",
+    "overlap": 11,
+    "overlapGeneric": 6,
+    "overlapGenericShare": 0.55,
+    "neighbourhoodGenericShare": 0.85,
+    "portability": 0.11,
+    "refMean": 0.19,
+    "residualOverlap": 5,
+    "residualRefMean": 8.5,
+    "residualScore": 0.59
+   }
+  ]
+ },
+ "summary": {
+  "arthouse-drama": {
+   "pearson_portability_vs_refMean": 0.52,
+   "spearman_score_vs_residual": 0.25,
+   "meanOverlapGenericShare": 0.42,
+   "above1": [],
+   "below1": [
+    "FR",
+    "MX",
+    "KR",
+    "JP",
+    "BR"
+   ]
+  },
+  "crime-thriller": {
+   "pearson_portability_vs_refMean": 0.54,
+   "spearman_score_vs_residual": -0.08,
+   "meanOverlapGenericShare": 0.8,
+   "above1": [
+    "US"
+   ],
+   "below1": []
+  },
+  "spanish-coming-of-age": {
+   "pearson_portability_vs_refMean": 0.85,
+   "spearman_score_vs_residual": 0.66,
+   "meanOverlapGenericShare": 0.59,
+   "above1": [],
+   "below1": [
+    "US",
+    "GB",
+    "FR",
+    "DE",
+    "MX",
+    "KR",
+    "JP",
+    "BR"
+   ]
+  }
+ },
+ "crossBriefSpearman": {
+  "score": {
+   "arthouse-drama~crime-thriller": 0.23,
+   "arthouse-drama~spanish-coming-of-age": 0.57,
+   "crime-thriller~spanish-coming-of-age": -0.12
+  },
+  "rawPortability": {
+   "arthouse-drama~crime-thriller": 0.6,
+   "arthouse-drama~spanish-coming-of-age": 0.58,
+   "crime-thriller~spanish-coming-of-age": 0.45
+  }
+ },
+ "calls": 630,
+ "network": 0
+}

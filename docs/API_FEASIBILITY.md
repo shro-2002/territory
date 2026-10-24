@@ -28,8 +28,9 @@ Aggregates: `docs/experiments/results-live.json`. Raw responses: `.private/` onl
 `N0` = comps' top-100 neighbourhood (no location, 2018+). `Qm` = same query conditioned on market m.
 `portability(m) = |Qm ∩ N0| / 100` — set-based, so per-query normalization is irrelevant.
 `score(m) = portability(m) / mean portability of 4 reference genre comp sets (horror, comedy, animation, action) in m`,
-which removes market-wide effects (data density, catalogue). `Qm \ N0` gives market-specific nearby titles
-(buyer-facing local comps). Ordinal, relative; not audience size.
+which removes market-wide effects (data density, catalogue). Nearby titles are checked against the same
+market's reference-genre neighbourhoods: 56–93% also appear for unrelated genres (market catalogue), so only titles
+absent from those lists are shown as distinctive, and only relative to the genres tested (see EVALUATION.md). Ordinal, relative; not audience size.
 
 ## Live results (2026-10-23)
 

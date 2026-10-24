@@ -1,6 +1,7 @@
 import type { Session } from "@/lib/agent/agent";
 import { NEIGHBOURHOOD_SIZE } from "@/lib/territory/market-signal";
 import { marketByCode } from "@/lib/territory/markets";
+import { catalogueSentence, internationalSentence, localOriginSentence } from "@/lib/territory/nearby-titles";
 import { MODE_REACH } from "@/lib/territory/planner";
 
 const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
@@ -29,12 +30,18 @@ export function briefMarkdown(s: Session, source: "live" | "mock"): string {
   }
 
   L.push("## 2. Market-by-market evidence", "", `Lift = share of the comps' ${NEIGHBOURHOOD_SIZE} closest Qloo titles that stay in the top ${NEIGHBOURHOOD_SIZE} when conditioned on the market, divided by the same share for reference genres there. Range = lift when each reference genre is left out.`, "");
-  L.push("| Market | Decision | Lift | Range | Confidence | Overlap | Local comps from Qloo |", "|---|---|---|---|---|---|---|");
+  L.push("| Market | Decision | Lift | Range | Confidence | Overlap | Nearby titles also returned for unrelated genres |", "|---|---|---|---|---|---|---|");
   for (const r of scored) {
     const m = marketByCode(r.code);
     const d = s.plan.markets.find((x) => x.code === r.code);
     const ex = s.plan.excluded.find((x) => x.code === r.code);
-    L.push(`| ${m.name} | ${d ? `**${d.mode}**` : ex ? `not selected (${ex.reason})` : "not selected (lower value)"} | ${r.score!.toFixed(2)}× | ${range(r.scoreRange)} | ${r.confidence} | ${r.overlap}/${NEIGHBOURHOOD_SIZE} | ${r.localNeighbours.join(", ") || "—"} |`);
+    L.push(`| ${m.name} | ${d ? `**${d.mode}**` : ex ? `not selected (${ex.reason})` : "not selected (lower value)"} | ${r.score!.toFixed(2)}× | ${range(r.scoreRange)} | ${r.confidence} | ${r.overlap}/${NEIGHBOURHOOD_SIZE} | ${r.nearby.controlsTested ? `${r.nearby.genericCount}/${NEIGHBOURHOOD_SIZE}` : "not tested"} |`);
+  }
+  L.push("", "**Nearby titles vs same-country genre controls.** A title Qloo also returns for an unrelated reference genre in the same country is that country's catalogue, not a comparable for this film. A title absent from those lists is distinctive only relative to the genres tested.", "");
+  for (const r of scored) {
+    const name = marketByCode(r.code).name;
+    const catalogue = r.nearby.controlsTested ? catalogueSentence(r.nearby, name) : "";
+    L.push(`- **${name}:** ${[catalogue, localOriginSentence(r.nearby, name), internationalSentence(r.nearby)].filter(Boolean).join(" ")}`);
   }
   if (thin.length) L.push("", `**Insufficient evidence (not scored, never recommended):** ${thin.map((r) => `${marketByCode(r.code).name} — ${r.insufficientReason}`).join("; ")}.`);
   L.push("");
@@ -65,7 +72,7 @@ export function briefMarkdown(s: Session, source: "live" | "mock"): string {
 
   L.push(`## ${s.revisions.length ? 6 : 5}. Suggested next steps`, "");
   L.push(
-    `- Pitch buyers in ${s.plan.markets.slice(0, 3).map((m) => m.name).join(", ") || "the shortlisted markets"} using the local comps above as reference titles; confirm they resonate with local acquisitions staff.`,
+    `- Pitch buyers in ${s.plan.markets.slice(0, 3).map((m) => m.name).join(", ") || "the shortlisted markets"} only after checking the nearby titles above with local acquisitions staff: Qloo proximity is not evidence of buyer or audience demand.`,
     "- Validate the shortlist with a sales agent or distributor active in each territory, and check rights availability and festival premiere strategy.",
     "- Get real localization quotes to replace the cost assumptions; re-run Territory with them.",
     ...(thin.length ? [`- Gather market-specific evidence for ${thin.map((r) => marketByCode(r.code).name).join(", ")} (local festival data, comparable releases) before ruling them out.`] : []),

@@ -49,7 +49,7 @@ zero blocked resources and zero console errors in both modes. The single violati
 ## Data protection & integrity (audited)
 - Key: server env only; absent from every response and client bundle (tested).
 - Browser session: HMAC-SHA256 **signed, not encrypted** — the browser can read it, so it contains only what the UI displays
-  (plan, scores, displayed local comps, claims, comp ids). Measured 23 KB, 6 entity ids (comps + shown alternatives).
+  (plan, scores, displayed nearby-title examples (≤5 per group), claims, comp ids). Measured 23 KB, 6 entity ids (comps + shown alternatives).
 - Research context (raw neighbourhood id lists, reference lists): **AES-256-GCM encrypted**, authenticated; tampering → 400.
 - `SESSION_SECRET` (≥ 32 chars) is mandatory on hosted live deployments; the server refuses to seal otherwise.
 - Seed cache: server function only; 404 on `/.private/...`, `/qloo-cache/...`, and traversal probes (tested on a production build).

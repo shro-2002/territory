@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import type { StreamMessage } from "@/app/api/agent/route";
 import { checkRateLimit } from "@/lib/server/rate-limit";
+import { SHOWN_PER_GROUP } from "@/lib/territory/nearby-titles";
 import { SHOWCASE_INPUT } from "@/lib/territory/scenarios";
 
 // Tests must never hit the live API: without a key the factory uses the labelled mock.
@@ -29,7 +30,9 @@ describe("POST /api/agent", () => {
     // The browser gets no raw neighbourhood lists: context is null in the session and only present encrypted.
     expect(result.session.context).toBeNull();
     expect(result.context).toBeTruthy();
-    expect(JSON.stringify(result)).not.toMatch(/Related [0-9a-f]{6}"/);
+    // Only a few labelled catalogue examples per market, never the neighbourhood list itself.
+    const exposed = new Set(JSON.stringify(result).match(/Related [0-9a-f]{6}/g) ?? []);
+    expect(exposed.size).toBeLessThanOrEqual(Object.keys(result.session.research).length * SHOWN_PER_GROUP);
 
     const target = result.session.plan.markets[0].code;
     const re = await post({ action: "replan", session: result.session, token: result.token, context: result.context, patch: { excludedMarkets: [target] } }, "203.0.113.10");

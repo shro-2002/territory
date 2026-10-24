@@ -91,11 +91,11 @@ function Panel({ title, tone, defaultOpen = false, children }: { title: string; 
 function QlooPanel({ session, stats }: { session: Session; stats: CallStats | null }) {
   const read = Object.keys(session.research).length;
   const qlooClaims = session.claims.filter((cl) => cl.provenance === "qloo").length;
-  const localTitles = Object.values(session.research).reduce((n, r) => n + r.localNeighbours.length, 0);
+  const localTitles = Object.values(session.research).reduce((n, r) => n + r.nearby.counts.localOrigin, 0);
   const rows: Array<[string, string]> = [
     ["Markets read through Qloo", String(read)],
     ["Qloo-backed claims", String(qlooClaims)],
-    ["Local comparable titles found", String(localTitles)],
+    ["Distinctive local-origin titles (vs genre controls)", String(localTitles)],
     ...(stats ? [["Qloo requests", `${stats.live + stats.cached} (${stats.live} live)`] as [string, string]] : []),
   ];
   return (
@@ -137,7 +137,7 @@ function MarketCard({ item, rank, onInspect }: { item: StrategyItem; rank: numbe
           <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Taste overlap vs typical genre</dt><dd className="text-right tabular-nums text-bone-dim">{item.score.toFixed(2)}×{item.scoreRange ? ` (${item.scoreRange[0].toFixed(2)}–${item.scoreRange[1].toFixed(2)})` : ""}</dd></div>
         </dl>
         {item.localComps.length > 0 && (
-          <p className="mt-4 text-xs leading-relaxed text-bone-faint">Local titles near yours: <span className="text-bone-dim">{item.localComps.join(", ")}</span></p>
+          <p className="mt-4 text-xs leading-relaxed text-bone-faint">Distinctive local-origin titles (vs genre controls): <span className="text-bone-dim">{item.localComps.join(", ")}</span></p>
         )}
         <button type="button" onClick={() => onInspect(item.code)} className="btn mt-5 w-full">Inspect on the atlas</button>
       </div>

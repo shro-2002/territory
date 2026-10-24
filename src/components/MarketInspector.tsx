@@ -3,6 +3,7 @@
 import type { MarketResearch, Session } from "@/lib/agent/agent";
 import { NEIGHBOURHOOD_SIZE } from "@/lib/territory/market-signal";
 import { marketByCode, REFERENCE_SETS } from "@/lib/territory/markets";
+import { catalogueSentence, localOriginSentence, NearbyTitles, SHOWN_PER_GROUP } from "@/lib/territory/nearby-titles";
 import { evidenceOf, excludedReason, formatLabel, readingOf } from "@/lib/territory/view-model";
 import { ProvenanceTag } from "./ProvenanceTag";
 import { EvidenceMeter } from "./ui/Meter";
@@ -28,11 +29,35 @@ function verdict(session: Session, code: string): { label: string; tone: string;
   return { label: "Not researched", tone: "var(--bone-faint)", why: "Territory researches a market when it is a candidate or when a revision needs a replacement." };
 }
 
+function TitleChips({ titles, label }: { titles: string[]; label: string }) {
+  if (!titles.length) return null;
+  return (
+    <div className="mt-3">
+      <p className="mb-1.5 text-xs text-bone-faint">{label}</p>
+      <ul className="flex flex-wrap gap-2">{titles.slice(0, SHOWN_PER_GROUP).map((t) => <li key={t} className="rounded-full border border-line-2 px-3 py-1 text-xs text-bone">{t}</li>)}</ul>
+    </div>
+  );
+}
+
+function NearbyTitlesBlock({ nearby, marketName }: { nearby: NearbyTitles; marketName: string }) {
+  return (
+    <div className="mt-5 border-t border-line pt-5">
+      <p className="eyebrow mb-2">Titles near your comps in {marketName}</p>
+      <p className="text-xs leading-relaxed text-bone-dim">{catalogueSentence(nearby, marketName)}</p>
+      <p className="mt-2 text-sm leading-relaxed text-bone">{localOriginSentence(nearby, marketName)}</p>
+      <TitleChips titles={nearby.international} label="Distinctive under the controls, produced elsewhere — relevant to the comps, not local matches" />
+      <TitleChips titles={nearby.originUnknown} label="Distinctive under the controls, production origin not recorded" />
+      <TitleChips titles={nearby.genericExamples} label={`Also returned for unrelated genres in ${marketName} (catalogue)`} />
+      <p className="mt-3 text-xs text-bone-faint">Tested against {nearby.controlsTested} reference genres only. Proximity in Qloo is not evidence of buyer interest or audience demand.</p>
+    </div>
+  );
+}
+
 export function MarketInspector({ session, code }: Props) {
   const market = marketByCode(code);
   const r: MarketResearch | undefined = session.research[code];
   const v = verdict(session, code);
-  const claims = session.claims.filter((c) => c.text.startsWith(`${market.name}:`) || c.text.startsWith(`${market.name}-specific`));
+  const claims = session.claims.filter((c) => c.text.startsWith(`${market.name}:`));
   const reading = r ? readingOf(r) : null;
 
   return (
@@ -54,13 +79,7 @@ export function MarketInspector({ session, code }: Props) {
       )}
       {r?.score === null && <p className="mt-5 rounded-xl border border-caution/40 bg-caution/10 p-3 text-sm text-bone">This is a gap in the evidence, not a rejection. Territory will not plan this market without more data.</p>}
 
-      {r && r.localNeighbours.length > 0 && (
-        <div className="mt-5">
-          <p className="eyebrow mb-2">Local titles near your comps</p>
-          <ul className="flex flex-wrap gap-2">{r.localNeighbours.map((t) => <li key={t} className="rounded-full border border-line-2 px-3 py-1 text-xs text-bone">{t}</li>)}</ul>
-          <p className="mt-2 text-xs text-bone-faint">From Qloo: close to your comps in {market.name}, absent from the global list. Useful as buyer-facing local comparables.</p>
-        </div>
-      )}
+      {r && r.score !== null && r.nearby.controlsTested > 0 && <NearbyTitlesBlock nearby={r.nearby} marketName={market.name} />}
 
       {r && r.score !== null && (
         <details className="group mt-5 border-t border-line pt-4">

@@ -71,7 +71,8 @@ Constraint validity and arithmetic are identical by construction (both 9/9 valid
 
 - Without Qloo the planner returns **the same plan for every film** — it cannot tell a Korean-American drama from a
   Texas thriller. With Qloo the plans and the replacements chosen after a market is removed depend on the film.
-- Cultural specificity: per film, 45 market-specific nearby titles and 18 market claims backed by Qloo call ids; 0 unbacked
+- Cultural specificity (**superseded**, see the catalogue audit below): the 45 "market-specific nearby titles" per film were
+  mostly market catalogue. 18 market claims backed by Qloo call ids; 0 unbacked
   market claims. Disabled: none.
 - Reliability: the Qloo condition degraded honestly once (ambiguous comp) and declined once (no resolvable comps).
 - Not shown: that the Qloo-driven choices lead to better releases. No outcome data.
@@ -88,6 +89,37 @@ Constraint validity and arithmetic are identical by construction (both 9/9 valid
 | Reproducibility | uncached re-query drift 0 titles (E3) | — |
 Confidence labels are **low** (overlap < 8 or range width > 0.35) or **moderate**; never high, because the signal is untested
 against outcomes.
+
+## Catalogue audit (`npm run audit-catalogue`, cached data, 0 new calls, 2026-10-24)
+
+Question: does the score account for the finding that Qloo returns largely the same titles in a country whatever
+the seed? Controls = each market's neighbourhoods for the four reference genre sets (already fetched for the score).
+"Catalogue" = a title near the comps that the same market also returns for at least one unrelated reference genre.
+
+| | Arthouse drama | Crime thriller | Spanish coming-of-age |
+|---|---|---|---|
+| Comp neighbourhood that is catalogue (per market) | 56–81% | 87–93% | 64–86% |
+| Score overlap that is catalogue (mean) | 42% | 80% | 59% |
+| Showcase portability vs reference baseline, Pearson across markets | 0.52 | 0.54 | 0.85 |
+| Rank agreement, score vs catalogue-removed "residual" ratio (Spearman) | 0.25 | −0.08 | 0.66 |
+| Markets whose whole leave-one-out range is above 1× | none | US | none |
+| Markets whose whole range is below 1× | FR MX KR JP BR | none | 8 of 9, incl. MX (ES 0.61–1.00) |
+
+Cross-brief rank agreement of raw portability is 0.45–0.60, falling to −0.12–0.57 after normalisation.
+
+- **The normalisation does real work, but on the wrong factor.** It removes some of the shared market level
+  (cross-brief agreement drops), but it divides by how much of each *reference genre's* global list survives. It does
+  not remove catalogue titles from the film's own overlap, which make up 42–80% of that overlap.
+- **The market ranking does not survive removing catalogue titles.** For the arthouse brief the score ranks the US first
+  and Korea 8th of 9. The catalogue-removed ratio ranks Korea first and the US 6th. Residual counts are small (6–13
+  titles), so neither ordering is reliable.
+- **A face-validity failure.** A Spanish-language coming-of-age film scores below a typical genre in Mexico and Spain.
+  Portability penalises a market where the comps' neighbourhood is *more local*, which is the opposite of cultural fit.
+- **Still defensible:** each market's catalogue share; nearby titles absent from all four controls, as candidates for
+  human review only; insufficient-evidence refusals; the provenance ledger; and the planner's constraint maths.
+- **No longer defensible:** "the comps travel better / worse here" as a ranking signal for choosing markets; "Korea at
+  0.69×" as a finding about Korea; "market-specific local comps"; and the ablation's "film-specific market choices".
+  The ablation shows the plan *depends on* the comps, not that the dependence carries cultural meaning.
 
 ## 2018+ window (investigated live, `npm run year-window`)
 Location-conditioned **movie** results contained no pre-2018 titles in any variant: country or city location, `bias.trends=off`,

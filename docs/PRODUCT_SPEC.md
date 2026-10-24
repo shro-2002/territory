@@ -14,7 +14,7 @@ per-language subtitle/dub cost assumptions, constraints (budget, max markets, ex
 
 ## Modules
 1. **Cultural Intelligence Atlas** — resolve comps (disambiguate), research each market with location-conditioned
-   Qloo neighbourhoods, taste-portability signal vs reference genres, market-specific local comps, thin-evidence fallback to Qloo-suggested substitute comps.
+   Qloo neighbourhoods, taste-portability signal vs reference genres, nearby titles checked against same-country genre controls (catalogue vs distinctive, local origin only when Qloo records it), thin-evidence fallback to Qloo-suggested substitute comps.
 2. **Distribution War Room** — constraint changes trigger impact analysis → selective research → deterministic re-plan → independent verification → plain-language diff.
 3. **Evidence Lab** — every Qloo call (params, status, latency, cache hit), claim ledger with provenance, experiment results, Qloo vs LLM-only comparison.
 

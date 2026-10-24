@@ -88,7 +88,7 @@ export function strategyItems(session: Session): StrategyItem[] {
       reading,
       evidence: evidenceOf(r),
       scoreRange: r.scoreRange,
-      localComps: r.localNeighbours.slice(0, 3),
+      localComps: r.nearby.localOrigin.slice(0, 3),
       reason: `${reading.overlap} ${costReason(m, session.plan)}`,
     };
   });
@@ -125,7 +125,7 @@ export function nextSteps(session: Session): string[] {
   const top = session.plan.markets.slice(0, 3).map((m) => m.name);
   const thin = Object.values(session.research).filter((r) => r.score === null).map((r) => marketByCode(r.code).name);
   return [
-    top.length ? `Pitch buyers in ${top.join(", ")} with the local comps shown for each market.` : "Loosen a constraint or try different comps, then re-run.",
+    top.length ? `Before pitching buyers in ${top.join(", ")}, check each market's nearby titles: most are that country's general catalogue, and the rest are tested against only four genres.` : "Loosen a constraint or try different comps, then re-run.",
     "Check rights availability and festival timing with a sales agent active in each territory.",
     "Replace the illustrative cost assumptions with real localization quotes and re-run.",
     ...(thin.length ? [`Gather market-specific evidence for ${thin.join(", ")} before ruling them out.`] : []),

@@ -18,7 +18,7 @@ export function AtlasSection({ session, selected, pending, onSelect }: Props) {
   return (
     <section aria-labelledby="atlas-title" className="mx-auto max-w-[1320px] px-4 pt-32 sm:px-8">
       <SectionHead id="atlas" eyebrow="Cultural market atlas" title={<span id="atlas-title">Every candidate market, and why.</span>}>
-        Select a country to see why it was chosen, left out, or could not be read — and the local titles Qloo finds near your comps.
+        Select a country to see why it was chosen, left out, or could not be read — and which nearby titles survive same-country genre controls.
       </SectionHead>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)]">
         <div className="panel p-4 sm:p-6">

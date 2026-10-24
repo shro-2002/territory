@@ -33,7 +33,7 @@ function qlooStats(s: Session) {
     valid: s.violations.length === 0,
     marketsWithScores: Object.values(s.research).filter((r) => r.score !== null).length,
     marketsInsufficient: Object.values(s.research).filter((r) => r.score === null).length,
-    localCompsTotal: Object.values(s.research).reduce((n, r) => n + r.localNeighbours.length, 0),
+    localOriginTitlesTotal: Object.values(s.research).reduce((n, r) => n + r.nearby.counts.localOrigin, 0),
     marketClaimsBackedByQlooCalls: marketClaims.filter((c) => c.callIds.length > 0).length,
     marketClaimsUnbacked: marketClaims.filter((c) => c.callIds.length === 0).length,
   };
@@ -58,7 +58,7 @@ async function main() {
       scenario: id,
       removedMarket: lost ?? null,
       qloo: { ...qlooStats(s1), afterRemoval: codes(s2.plan), afterBudgetCut: codes(s3.plan), reservesResearched: s2.revisions.at(-1)?.newlyResearched ?? [] },
-      disabled: { plan: codes(d[0]), afterRemoval: codes(d[1]), afterBudgetCut: codes(d[2]), localCompsTotal: 0, marketClaimsBackedByEvidence: 0 },
+      disabled: { plan: codes(d[0]), afterRemoval: codes(d[1]), afterBudgetCut: codes(d[2]), localOriginTitlesTotal: 0, marketClaimsBackedByEvidence: 0 },
       constraintValid: { qloo: q.map((s) => s.violations.length === 0), disabled: d.map((p, i) => validatePlan(p, [input.constraints, c2, c3][i], input.costs, input.originalLanguage).length === 0) },
       planOverlapJaccard: q.map((s, i) => Math.round(jaccard(codes(s.plan), codes(d[i])) * 1000) / 1000),
       marketsChangedByCulturalEvidence: q.map((s, i) => new Set([...codes(s.plan), ...codes(d[i])]).size - codes(s.plan).filter((c) => codes(d[i]).includes(c)).length),

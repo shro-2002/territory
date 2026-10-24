@@ -199,7 +199,10 @@ export function slimBody(body: unknown): unknown {
       ...(e.types ? { types: e.types } : {}),
       ...(e.subtype ? { subtype: e.subtype } : {}),
       ...(typeof e.popularity === "number" ? { popularity: e.popularity } : {}),
-      ...(props?.release_year !== undefined ? { properties: { release_year: props.release_year } } : {}),
+      // release_country lets Territory verify a nearby title's local production origin.
+      ...(props?.release_year !== undefined || props?.release_country !== undefined
+        ? { properties: { ...(props.release_year !== undefined ? { release_year: props.release_year } : {}), ...(props.release_country !== undefined ? { release_country: props.release_country } : {}) } }
+        : {}),
       ...(typeof query?.affinity === "number" ? { query: { affinity: query.affinity } } : {}),
     };
   };

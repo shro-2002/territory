@@ -1,6 +1,7 @@
 import type { CallRecord } from "../qloo/types";
 import { NEIGHBOURHOOD_SIZE } from "../territory/market-signal";
 import { marketByCode } from "../territory/markets";
+import { catalogueSentence, internationalSentence, localOriginSentence } from "../territory/nearby-titles";
 import type { LocalizationMode, Plan } from "../territory/planner";
 import type { AgentInput, MarketResearch } from "./agent";
 import type { ResolvedComp } from "./resolve";
@@ -44,7 +45,12 @@ export function claimsFor({ input, comps, research, plan, calls, modeReach }: Cl
     if (r.score === null) add(`${name}: insufficient evidence — ${r.insufficientReason}.`, "insufficient", ids);
     else {
       add(`${name}: ${r.overlap} of the comps' ${NEIGHBOURHOOD_SIZE} closest titles stay in their top ${NEIGHBOURHOOD_SIZE} when Qloo conditions on ${name}; that is ${r.score.toFixed(2)}× the average of reference genres there${r.fallback ? " (after adding substitute comps)" : ""}. Relative taste alignment, not audience size.`, "qloo", ids);
-      if (r.localNeighbours.length) add(`${name}-specific titles near the comps (useful as buyer-facing local comps): ${r.localNeighbours.join(", ")}.`, "qloo", ids);
+      const n = r.nearby;
+      if (n.controlsTested) {
+        add(`${name}: ${catalogueSentence(n, name)}`, "qloo", ids);
+        add(`${name}: ${localOriginSentence(n, name)}`, n.counts.localOrigin ? "qloo" : "insufficient", ids);
+        if (n.counts.international) add(`${name}: ${internationalSentence(n)}`, "qloo", ids);
+      }
     }
   }
   for (const l of plan.languages) add(`${l.language} ${l.mode} costs $${l.costUsd.toLocaleString("en-US")} (user cost assumption).`, "user");

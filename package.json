@@ -15,6 +15,7 @@
     "year-window": "tsx --env-file-if-exists=.env.local scripts/eval/year-window.ts",
     "e2e": "playwright test",
     "audit-scoring": "tsx --env-file-if-exists=.env.local scripts/eval/scoring-audit.ts",
+    "audit-catalogue": "tsx scripts/eval/catalogue-audit.mts",
     "ablation": "tsx --env-file-if-exists=.env.local scripts/eval/ablation.ts"
   },
   "dependencies": {

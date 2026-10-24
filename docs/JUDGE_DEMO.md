@@ -8,7 +8,7 @@ Everything below was exercised in a browser against the live Qloo hackathon API 
    then one line per market as its Qloo research finishes; the atlas pulses the markets still pending.
    Cold cache ≈ 40 s / ~100 Qloo calls; warm cache ≈ 2–3 s.
 3. **50–60 s · Atlas + evidence.** Markets coloured by taste-portability lift. Click any market: overlap of the comps'
-   neighbourhood, lift vs four reference genres, market-specific nearby titles from Qloo, provenance-tagged claims.
+   neighbourhood, lift vs four reference genres, nearby titles split into market catalogue vs distinctive under same-country genre controls, provenance-tagged claims.
 4. **60–80 s · War Room.** In the release plan, press **Remove** on a dubbed market (e.g. Germany) →
    impact analysis, reuse of all prior research (no new calls), reserve markets researched live, new plan,
    independent constraint check, side-by-side v1 → v2 with reasons. Then **Cut budget 40%** → dubs become subtitles,

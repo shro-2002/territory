@@ -2,6 +2,7 @@ import type { QlooClient } from "../qloo/client";
 import { QlooError } from "../qloo/types";
 import { computeMarketSignal, MarketSignal, NEIGHBOURHOOD_SIZE, portability } from "../territory/market-signal";
 import { marketByCode, REFERENCE_SETS } from "../territory/markets";
+import { classifyNearby, EMPTY_NEARBY, NearbyTitles } from "../territory/nearby-titles";
 import { resolveComp } from "./resolve";
 
 const PAGE_SIZE = 50;
@@ -16,6 +17,8 @@ export const RELEASE_YEAR_FLOOR = 2018;
 export interface Neighbourhood {
   ids: string[];
   names: Record<string, string>;
+  /** Qloo release_country per title; absent for results cached before it was kept. */
+  origins: Record<string, string[]>;
   callIds: string[];
 }
 
@@ -29,7 +32,8 @@ export interface MarketResearch extends MarketSignal {
   code: string;
   callIds: string[];
   compIds: string[];
-  localNeighbours: string[];
+  /** Nearby titles split by what the same-market genre controls can support. */
+  nearby: NearbyTitles;
   referencePortabilities: Record<string, number>;
   fallback?: string;
 }
@@ -38,6 +42,7 @@ export interface MarketResearch extends MarketSignal {
 export async function neighbourhood(client: QlooClient, seedIds: string[], locationQuery?: string): Promise<Neighbourhood> {
   const ids: string[] = [];
   const names: Record<string, string> = {};
+  const origins: Record<string, string[]> = {};
   const callIds: string[] = [];
   for (let page = 1; page <= PAGES; page++) {
     const res = await client.insights({
@@ -54,10 +59,13 @@ export async function neighbourhood(client: QlooClient, seedIds: string[], locat
     for (const e of entities) {
       ids.push(e.entity_id);
       names[e.entity_id] = e.name;
+      const country = e.properties?.release_country;
+      if (typeof country === "string") origins[e.entity_id] = [country];
+      else if (Array.isArray(country)) origins[e.entity_id] = country.filter((c): c is string => typeof c === "string");
     }
     if (entities.length < PAGE_SIZE) break;
   }
-  return { ids, names, callIds };
+  return { ids, names, origins, callIds };
 }
 
 export async function buildContext(client: QlooClient, compIds: string[]): Promise<ResearchContext> {
@@ -79,19 +87,24 @@ export async function researchMarket(client: QlooClient, code: string, ctx: Rese
     const local = await neighbourhood(client, ctx.compIds, market.locationQuery);
     const referencePortabilities: Record<string, number> = {};
     const refCalls: string[] = [];
+    const controlIds = new Set<string>();
     for (const ref of ctx.references.filter((r) => r.ids.length && r.globalIds.length)) {
       const n = await neighbourhood(client, ref.ids, market.locationQuery);
       refCalls.push(...n.callIds);
+      for (const id of n.ids.slice(0, NEIGHBOURHOOD_SIZE)) controlIds.add(id);
       referencePortabilities[ref.id] = portability(ref.globalIds, n.ids).portability;
     }
     const signal = computeMarketSignal(ctx.global.ids, local.ids, Object.values(referencePortabilities));
     return {
       code, compIds: ctx.compIds, callIds: [...local.callIds, ...refCalls], referencePortabilities, ...signal,
-      localNeighbours: signal.localNeighbourIds.slice(0, 5).map((id) => local.names[id] ?? id),
+      nearby: classifyNearby({
+        ids: local.ids.slice(0, NEIGHBOURHOOD_SIZE).filter((id) => !ctx.compIds.includes(id)),
+        names: local.names, origins: local.origins, controlIds, controlsTested: Object.keys(referencePortabilities).length, country: market.name,
+      }),
     };
   } catch (err) {
     const reason = err instanceof QlooError ? `${err.code}: ${err.message}` : String(err);
-    return { code, compIds: ctx.compIds, callIds: [], referencePortabilities: {}, localNeighbours: [], localNeighbourIds: [], score: null, overlap: 0, portability: 0, baselinePortability: null, scoreRange: null, confidence: null, insufficientReason: `query failed (${reason})` };
+    return { code, compIds: ctx.compIds, callIds: [], referencePortabilities: {}, nearby: EMPTY_NEARBY, localNeighbourIds: [], score: null, overlap: 0, portability: 0, baselinePortability: null, scoreRange: null, confidence: null, insufficientReason: `query failed (${reason})` };
   }
 }
 
