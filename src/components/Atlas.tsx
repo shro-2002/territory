@@ -14,7 +14,7 @@ const WIDTH = 960;
 const HEIGHT = 480;
 const RESEARCHED_OPACITY = 0.3;
 
-export type AtlasStatus = "plan" | "scored" | "insufficient" | "excluded" | "candidate" | "none";
+export type AtlasStatus = "plan" | "researched" | "insufficient" | "excluded" | "candidate" | "none";
 
 export interface AtlasProps {
   research: Record<string, MarketResearch>;
@@ -29,7 +29,7 @@ export interface AtlasProps {
 
 export const STATUS_LABEL: Record<AtlasStatus, string> = {
   plan: "Selected",
-  scored: "Researched",
+  researched: "Researched",
   insufficient: "Research gap",
   excluded: "Excluded",
   candidate: "Awaiting research",
@@ -57,7 +57,7 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
     if (excludedCodes.includes(code)) return "excluded";
     if (planCodes.includes(code)) return "plan";
     const r = research[code];
-    if (r) return r.evidenceGap ? "insufficient" : "scored";
+    if (r) return r.evidenceGap ? "insufficient" : "researched";
     return candidateCodes.includes(code) ? "candidate" : "none";
   };
 
@@ -104,9 +104,9 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
             if (!m) return <path key={p.key} d={p.d} fill="var(--map-land)" stroke="var(--map-land-line)" strokeWidth={0.5} />;
             const st = status(m.code);
             const fill =
-              st === "plan" ? "url(#planFill)" : st === "excluded" ? "url(#hatch)" : st === "insufficient" ? "var(--map-insufficient)" : st === "scored" ? "var(--evidence)" : st === "candidate" ? "var(--map-candidate)" : "var(--map-land)";
+              st === "plan" ? "url(#planFill)" : st === "excluded" ? "url(#hatch)" : st === "insufficient" ? "var(--map-insufficient)" : st === "researched" ? "var(--evidence)" : st === "candidate" ? "var(--map-candidate)" : "var(--map-land)";
             // Researched markets share one hue and one opacity: no Qloo measure ranks one country over another.
-            const fillOpacity = st === "scored" ? RESEARCHED_OPACITY : 1;
+            const fillOpacity = st === "researched" ? RESEARCHED_OPACITY : 1;
             const clickable = st !== "none";
             const isSelected = selected === m.code;
             return (
@@ -116,7 +116,7 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
                 fill={fill}
                 fillOpacity={fillOpacity}
                 filter={st === "plan" ? "url(#glow)" : undefined}
-                stroke={isSelected ? "var(--bone)" : st === "plan" ? "var(--map-selected-from)" : st === "insufficient" ? "var(--caution)" : st === "scored" ? "color-mix(in oklab, var(--evidence) 50%, transparent)" : st === "excluded" ? "var(--removed)" : "var(--map-land-line)"}
+                stroke={isSelected ? "var(--bone)" : st === "plan" ? "var(--map-selected-from)" : st === "insufficient" ? "var(--caution)" : st === "researched" ? "color-mix(in oklab, var(--evidence) 50%, transparent)" : st === "excluded" ? "var(--removed)" : "var(--map-land-line)"}
                 strokeWidth={isSelected ? 2 : st === "plan" ? 1.2 : 0.7}
                 strokeDasharray={st === "insufficient" ? "3 3" : undefined}
                 className={`${clickable ? "cursor-pointer" : ""} ${pending.includes(m.code) ? "pulse" : ""} outline-none transition-[fill,stroke] duration-500 focus-visible:stroke-[var(--bone)]`}
@@ -153,7 +153,7 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
         <Legend swatch={<span className="h-3 w-3 rounded-sm bg-evidence/40 ring-1 ring-evidence/60" />} label="Researched" />
         <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-caution" style={{ background: "var(--map-insufficient)" }} />} label="Research gap" />
         <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-removed" style={{ background: "repeating-linear-gradient(45deg, var(--removed) 0 2px, var(--map-excluded) 2px 5px)" }} />} label="Excluded" />
-        <span className="text-bone-faint">Brighter cyan = more of your comps&apos; taste carries over</span>
+        <span className="text-bone-faint">Colour shows research status only — no Qloo measure ranks one country over another.</span>
       </figcaption>
     </figure>
   );

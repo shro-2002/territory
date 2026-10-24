@@ -9,9 +9,11 @@ and plans change constantly: a buyer passes, a financier trims the localization 
 
 ## What it does
 See README "What it does". For each country the filmmaker is considering, Territory shows what Qloo associates with the film's
-comparable titles there. It separates the country's general catalogue (titles Qloo also returns there for four unrelated
-genres, 56–93% in live data) from associations distinctive under those controls, and flags local production origin only when
-Qloo records it. Then it turns that evidence into questions to investigate. Separately, a deterministic planner fits the
+comparable titles there, then runs a claim check: titles Qloo also returns there for four unrelated genres are the country's
+general catalogue (56–93% in live data); the rest must also survive two unrelated-film controls and be absent from the other
+researched markets' lists. Survivors are candidates to verify, never established local matches; origin comes only from Qloo's
+record and release format is always unverified. Each market gets one decision and a next research action, with the Qloo
+request ids behind it. Separately, a deterministic planner fits the
 filmmaker's own market priorities to the localization budget. When a market falls through or the budget is cut, it re-plans,
 re-verifies and explains each change as driven by priority, cost or constraint.
 
@@ -19,8 +21,8 @@ re-verifies and explains each change as driven by priority, cost or constraint.
 Next.js 16 / TypeScript; server-side typed Qloo client (GET only, timeouts, 429 back-off, concurrency 4, call budgets, private
 slimmed cache, Redis quota isolation); bounded deterministic agent state machine (validation → resolution → planning →
 investigation → verification → plan → constraint check → report; and impact analysis → selective research → revision →
-re-verification); same-country genre controls for every association; exhaustive constrained optimizer with an independent
-validator; HMAC-sealed stateless sessions; NDJSON streaming; d3-geo atlas; three.js globe. 94 unit/integration tests,
+re-verification); a claim checker (same-country genre controls, fixed-rule unrelated-film controls, cross-market check); exhaustive constrained optimizer with an independent
+validator; HMAC-sealed stateless sessions; NDJSON streaming; d3-geo atlas; three.js globe. 112 unit/integration tests,
 Playwright journey test, CI.
 
 ## Qloo usage
@@ -36,12 +38,15 @@ Spanish-language film scored below a typical genre in Spain and Mexico. We retir
 
 ## Accomplishments
 An honest audit that killed our own headline metric; a planner provably independent of unvalidated cultural scores (a test
-scrambles every Qloo field and requires the same plan); catalogue-vs-distinctive evidence with exact counts; a War Room that
+scrambles every Qloo field and requires the same plan); a claim checker that rejects most of what a genre-only filter called
+distinctive (Japan 31 → 4 candidates, Germany 33 → 1 format-unverified listing) with request-level provenance; a War Room that
 conditions its tool use on what changed.
 
 ## What we learned / limits
-Only four genre controls, one day of data, no outcome validation. "Distinctive" means only "not returned for those four genres".
-Origin is unverified for results cached before Territory kept Qloo's release-country field.
+Four genre and two unrelated-film controls, one day of data, no outcome validation. A candidate only survived those controls;
+that is not proof it is specific to the film, and "no local comparable established" is not proof none exists. Origin is
+unknown for results cached before Territory kept Qloo's release-country field, and Qloo records no release format (a concert
+premiere appears as a movie), so every candidate needs human review.
 
 ## What's next
 More and better-matched controls; TV and music associations (each needs its own controls); usability sessions with sales agents;
@@ -60,15 +65,15 @@ preparing AFM/EFM/Marché.
 not exist and got cost totals wrong 9 times in 12.
 
 **What the agent does.** Resolves comps; researches each candidate country in Qloo and qualifies every association against
-four genre controls; detects thin evidence; plans localization under budget from the filmmaker's priorities; and when reality hits,
+a claim check (genre, unrelated-film and cross-market controls); detects thin evidence; plans localization under budget from the filmmaker's priorities; and when reality hits,
 works out what is invalidated, reuses what is still valid, researches only when the candidate list runs out, and explains every
 change.
 
 **Qloo's measurable contribution.** The cultural research layer: associations per country, the share that is general catalogue,
-distinctive candidates under controls, recorded origin, every claim traceable to Qloo requests, and refusal when evidence is
+candidates that survive every control (to verify, not proven), recorded origin, every decision traceable to Qloo requests, and refusal when evidence is
 absent. Qloo does **not** choose markets — we tested that it can't.
 
-**Limits.** Associations are not demand; four controls; 2018+ location data for films; no outcome validation yet.
+**Limits.** Associations are not demand; six controls; origin often unrecorded and format never recorded; 2018+ location data for films; no outcome validation yet.
 
 **Path to product.** Validate with sales agents; add better controls and TV/festival/buyer data; sell per-title research reports
 to producers and seats to sales agents.
@@ -80,11 +85,11 @@ to producers and seats to sales agents.
 | Time | Screen | Caption |
 |---|---|---|
 | 0–8 s | Landing; film card; globe | "An unreleased indie film. Nine countries on the filmmaker's list. What does Qloo say about each?" |
-| 8–20 s | Click **Reveal the strategy**; trace streams | "Territory researches each country in Qloo's taste graph, with four genre controls" |
-| 20–34 s | Click Germany on the atlas: catalogue count, distinctive titles, origin line | "67 of 100 associations are Germany's general catalogue. Territory says so" |
-| 34–42 s | Plan cards: "Your #1 candidate…", budget meter, ✓ independent check | "The budget follows your priorities, not a cultural score" |
-| 42–58 s | **Germany's distributor pulls out** → Mexico promoted, no new Qloo calls | "Next candidate on your list. No research needed, and it says why" |
-| 58–70 s | **Budget cut 40%** → dub becomes subtitles | "Every change tagged: priority, cost or constraint" |
-| 70–82 s | Strategy panel: questions to investigate; Evidence Lab retired-metric note | "What to check next, and the metric we retired after auditing it" |
-| 82–90 s | Export brief | "A research brief you can send, with every claim traced to Qloo" |
+| 8–18 s | Click **Reveal the strategy**; trace streams | "Territory reads each country in Qloo's taste graph, then checks its own claims" |
+| 18–36 s | Atlas → **Japan**: funnel 100 → 31 → 14 → 4; *The Asadas* under "failed the stronger check"; 4 candidates, origin not recorded | "A genre-only filter said 31 leads. Unrelated films and other markets cut it to 4 — candidates to verify, not local matches" |
+| 36–44 s | Atlas → **Germany**: one survivor, a concert premiere, format-unverified | "Qloo can't tell a film from an event screening. Territory says so and asks a human" |
+| 44–52 s | Plan cards, budget meter, ✓ independent check | "The budget follows your priorities, not a cultural score" |
+| 52–66 s | **Germany's distributor pulls out** → next candidate promoted, no new Qloo calls | "Next candidate on your list. No research needed, and it says why" |
+| 66–76 s | **Budget cut 40%** → dub becomes subtitles | "Every change tagged: priority, cost or constraint" |
+| 76–90 s | Export brief: Japan decision + Qloo request ids | "Every claim decision traced to the Qloo requests behind it" |
 Record on the deployed URL; keep the evidence-source line visible (honesty).

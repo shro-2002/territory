@@ -151,7 +151,7 @@ export function TerritoryApp({ initialInput, summary }: Props) {
       {isEditing && <BriefDialog initial={input} onSubmit={run} onCancel={() => setIsEditing(false)} />}
 
       <footer className="mx-auto mt-32 max-w-[1320px] border-t border-line px-4 py-8 text-xs leading-relaxed text-bone-faint sm:px-8">
-        Qloo associations are titles related to your comps in each country, checked against four unrelated genres there. They are not audience preference, demand, box-office or revenue evidence, and they do not choose your markets. Location-conditioned Qloo movie data covers 2018+ releases. Cost figures are illustrative user assumptions. Built for the Qloo Agentic Hackathon 2026 · MIT licence.
+        Qloo associations are titles related to your comps in each country, checked against unrelated genres and films there. Surviving titles are candidates to verify, not proven local matches. They are not audience preference, demand, box-office or revenue evidence, and they do not choose your markets. Location-conditioned Qloo movie data covers 2018+ releases. Cost figures are illustrative user assumptions. Built for the Qloo Agentic Hackathon 2026 · MIT licence.
       </footer>
     </div>
   );

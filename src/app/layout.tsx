@@ -9,7 +9,7 @@ const displaySerif = Instrument_Serif({ variable: "--font-display-serif", subset
 
 export const metadata: Metadata = {
   title: "Territory — cultural research and localization planning for film",
-  description: "Qloo-grounded cultural research for independent film: what Qloo associates with your comps in each candidate country, what is generic and what is distinctive, and how your localization budget and scenarios play out.",
+  description: "Qloo-grounded cultural research for independent film: what Qloo associates with your comps in each candidate country, what is generic catalogue and what is worth verifying, and how your localization budget and scenarios play out.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

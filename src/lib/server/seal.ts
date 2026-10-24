@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
+import type { ResearchContext } from "../agent/research";
 import { hasLiveKey } from "../qloo/factory";
 import { isHosted } from "./hosting";
 
@@ -32,6 +33,18 @@ export function encrypt(payload: unknown): string {
   const cipher = createCipheriv("aes-256-gcm", key("enc"), iv);
   const body = Buffer.concat([cipher.update(JSON.stringify(payload), "utf8"), cipher.final()]);
   return Buffer.concat([iv, cipher.getAuthTag(), body]).toString("base64url");
+}
+
+/** Largest encrypted research context a replan request accepts (route body schema). */
+export const MAX_CONTEXT_CHARS = 300_000;
+
+/**
+ * Encrypt the research context within MAX_CONTEXT_CHARS. If claim-check evidence would push it over, the evidence is
+ * dropped and flagged, so a later revision reports "insufficient evidence" for those markets instead of failing or guessing.
+ */
+export function encryptContext(context: ResearchContext): string {
+  const full = encrypt(context);
+  return full.length <= MAX_CONTEXT_CHARS ? full : encrypt({ ...context, evidence: undefined, evidenceDropped: true });
 }
 
 /** Returns null if the blob was modified or sealed by another deployment. */

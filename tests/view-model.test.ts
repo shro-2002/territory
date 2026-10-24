@@ -9,10 +9,12 @@ import { budgetView, compareRows, evidenceLine, evidenceSummary, formatLabel, ne
 const client = () => new QlooClient({ apiKey: "mock", source: "mock", fetchImpl: createMockFetch(), sleep: async () => {}, callBudget: LIMITS.maxQlooCalls * 2 });
 
 describe("evidenceLine", () => {
-  it("states catalogue and distinctive counts without grading the market", () => {
-    const line = evidenceLine({ gap: null, titlesFound: 100, catalogue: 67, distinctive: 33, localOrigin: 0, originUnknown: 33, controlsTested: 4 });
+  it("states catalogue counts and claim-check candidates without grading the market", () => {
+    const line = evidenceLine({ gap: null, titlesFound: 100, catalogue: 67, claim: "verify", candidates: 4 });
     expect(line).toContain("67 of 100");
-    expect(line).toContain("33 are distinctive under 4 genre controls");
+    expect(line).toContain("4 survive every tested control and need human verification before being cited");
+    expect(evidenceLine({ gap: null, titlesFound: 100, catalogue: 67, claim: "none", candidates: 0 })).toContain("not proof that none exists");
+    expect(evidenceLine({ gap: null, titlesFound: 100, catalogue: 67, claim: "insufficient", candidates: 0 })).toContain("no local comparable is claimed");
     expect(line).not.toMatch(/strong|weak|promising|fit|demand|×/i);
   });
   it("reports a research gap as a gap", () => {
@@ -60,7 +62,8 @@ describe("derivations from a real mock-backed session", () => {
     expect(items).toHaveLength(v1.plan.markets.length);
     for (const i of items) expect(i.reason).toMatch(/on your candidate list|Suggested by Territory/);
     expect(uncertainties(v1).some((u) => u.includes("Markets were chosen by your priority order"))).toBe(true);
-    expect(nextSteps(v1).slice(0, Math.min(3, items.length)).every((q) => q.includes("?") || q.includes("Ask"))).toBe(true);
+    // The first next steps are the claim checker's research action for each leading planned market.
+    expect(nextSteps(v1).slice(0, Math.min(3, items.length))).toEqual(v1.plan.markets.slice(0, 3).map((m) => `${m.name}: ${v1.research[m.code].claimCheck!.action}`));
     expect(nextSteps(v1).length).toBeGreaterThanOrEqual(3);
   });
 

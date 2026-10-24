@@ -2,7 +2,7 @@
 
 Territory helps an independent filmmaker or small distributor **research the countries they are considering for an unreleased
 film and plan localization under a fixed budget**. Qloo shows what is culturally associated with the film's comparable titles
-in each country, and Territory separates the country's general catalogue from associations distinctive to those comps. A
+in each country, and Territory's claim checker separates the country's general catalogue from the few titles worth verifying. A
 deterministic planner fits the filmmaker's own market priorities to the budget, and re-plans when a market falls through or
 the budget is cut.
 
@@ -13,10 +13,12 @@ Built for the Qloo Agentic Hackathon 2026. Cultural evidence comes from the Qloo
 ## What it does
 1. **Brief** — title, synopsis, original language, 3–6 comparable titles, candidate markets **in your priority order**, budget.
 2. **Cultural investigation** — resolves comps in Qloo, then for each candidate country asks which titles Qloo associates with
-   the comps there and checks them against the same country's associations for four unrelated reference genres. Titles that
-   also come back for those genres are the country's **general catalogue**. The rest are **distinctive under the tested
-   controls**, with **verified local production origin** only when Qloo records it. Thin evidence triggers a fallback; gaps are
-   shown as missing evidence, not as rejections.
+   the comps there, then runs a **claim check**: titles Qloo also returns there for four unrelated genres are the country's
+   **general catalogue**; the rest must also survive two unrelated-film controls and be absent from the other researched
+   markets' top-100 lists. Survivors are **candidates to verify**, never established local matches; production origin comes
+   only from Qloo's record (otherwise "unknown") and release format is always unverified. Each market gets one decision —
+   candidates to verify, no local comparable established, or insufficient evidence — with its Qloo request ids. Thin evidence
+   triggers a fallback; gaps are shown as missing evidence, not as rejections.
 3. **Localization plan** — a deterministic optimizer takes your candidates in priority order and chooses subtitle or dub per
    language under budget and market cap; an independent validator re-checks every plan. **Qloo evidence never enters the
    optimizer.**
@@ -28,7 +30,9 @@ Built for the Qloo Agentic Hackathon 2026. Cultural evidence comes from the Qloo
 
 ## What the evidence means — and doesn't
 Qloo associations are titles related to the comps in a country. Territory reports how many are general catalogue (56–93% in
-live data) and lists the rest as candidates for a human to check. They are **not** audience preferences, demand, box-office or
+live data) and names only the titles that survive every control as candidates for a human to check. Surviving the controls is
+not proof a title is specific to the film, and "no local comparable established" is not proof none exists. They are **not**
+audience preferences, demand, box-office or
 buyer-interest evidence, and they do not choose markets. An earlier taste-portability score that ranked countries was
 **retired** after a cached-data audit showed it mostly measured each country's catalogue (see
 [docs/EVALUATION.md](docs/EVALUATION.md#catalogue-audit-npm-run-audit-catalogue-cached-data-0-new-calls-2026-10-24)).
@@ -37,7 +41,9 @@ Location-conditioned Qloo movie data covers 2018+ releases.
 ## What depends on Qloo
 Market selection does **not**: `tests/retired-score.test.ts` scrambles every Qloo-derived field and requires an identical plan.
 The cultural research does: which titles are associated with your comps in each country, which of them are catalogue, which
-survive four genre controls, and which have a recorded local origin. None of that exists without Qloo, and an LLM-only baseline
+survive the genre, unrelated-film and cross-market controls, and which have a recorded origin. In the cached showcase the
+checker cuts Japan's 31 genre-only "distinctive" titles to 4 candidates and Germany's 33 to 1 format-unverified listing.
+None of that exists without Qloo, and an LLM-only baseline
 named local comparables for films that do not exist (details: [docs/EVALUATION.md](docs/EVALUATION.md)).
 
 ## Run locally

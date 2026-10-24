@@ -42,20 +42,20 @@ export function Hero({ input, source, isBusy, hasResult, progress, pendingCodes,
       <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(ellipse 120% 90% at 55% 45%, transparent 62%, var(--ink) 100%)" }} />
       <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-ink to-transparent" />
 
-      <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1320px] flex-col justify-center px-4 pb-24 pt-28 sm:px-8">
+      <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1320px] flex-col justify-center px-4 pb-24 pt-[clamp(3rem,12svh,7rem)] sm:px-8">
         <div className="max-w-[640px]">
           <motion.p className="eyebrow flex items-center gap-3 text-gold" {...enter(0)}>
             <span aria-hidden className="h-px w-10 bg-gold/70" />
             Market strategy for independent film, built on Qloo taste data
           </motion.p>
-          <motion.h1 className="display mt-6 text-[clamp(2.9rem,7.6vw,6rem)] leading-[0.98]" {...enter(1)}>
+          <motion.h1 className="display mt-6 text-[clamp(2.9rem,min(7.6vw,10svh),6rem)] leading-[0.98]" {...enter(1)}>
             Research the <em className="text-accent">world</em> before your film travels.
           </motion.h1>
           <motion.p className="mt-6 max-w-[34rem] text-base leading-relaxed text-bone-dim sm:text-lg" {...enter(2)}>
-            Territory reads Qloo&apos;s taste graph in each country you are considering, separates generic catalogue from distinctive associations, and fits your localization budget to your priorities — then re-plans the moment a distributor drops out or the budget shrinks.
+            Territory reads Qloo&apos;s taste graph in each country you are considering, separates generic catalogue from the few associations worth verifying, and fits your localization budget to your priorities — then re-plans the moment a distributor drops out or the budget shrinks.
           </motion.p>
 
-          <motion.div className="mt-9 flex flex-wrap items-center gap-3" {...enter(3)}>
+          <motion.div className="mt-[clamp(1.5rem,4svh,2.25rem)] flex flex-wrap items-center gap-3" {...enter(3)}>
             {hasResult ? (
               <a href="#strategy" className="btn-primary">See the strategy</a>
             ) : (

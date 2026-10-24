@@ -1,4 +1,5 @@
 import type { AgentInput } from "../agent/agent";
+import { filmControlComps } from "./markets";
 
 /** Illustrative per-language costs a user would enter; Territory does not claim market prices. */
 export const DEFAULT_COSTS: AgentInput["costs"] = {
@@ -14,7 +15,7 @@ export const SHOWCASE_INPUT: AgentInput = {
   synopsis: "A Korean-American translator returns to Busan to clear her late mother's apartment and finds the letters her mother never sent.",
   genre: "intimate drama",
   originalLanguage: "English",
-  comps: [{ name: "Past Lives", year: 2023 }, { name: "Minari", year: 2020 }, { name: "Aftersun", year: 2022 }, { name: "Drive My Car", year: 2021 }],
+  comps: filmControlComps("arthouse-drama"),
   targetMarkets: ["US", "GB", "FR", "DE", "ES", "MX", "KR", "JP", "BR"],
   costs: DEFAULT_COSTS,
   constraints: { budgetUsd: 80000, maxMarkets: 5, excludedMarkets: [], excludedLanguages: [], subtitleFirst: false },
@@ -32,7 +33,7 @@ export const EVAL_SCENARIOS: Array<{ id: string; input: AgentInput }> = [
     input: {
       title: "Dry County (working title)", synopsis: "A small-town deputy in drought-stricken Texas uncovers a water-rights conspiracy that reaches her own family.",
       genre: "neo-western crime thriller", originalLanguage: "English",
-      comps: [{ name: "Hell or High Water", year: 2016 }, { name: "Wind River", year: 2017 }, { name: "Sicario", year: 2015 }, { name: "Prisoners", year: 2013 }],
+      comps: filmControlComps("crime-thriller"),
       targetMarkets: BASE_MARKETS, costs: DEFAULT_COSTS, constraints: BASE_CONSTRAINTS,
     },
   },
@@ -41,7 +42,7 @@ export const EVAL_SCENARIOS: Array<{ id: string; input: AgentInput }> = [
     input: {
       title: "Verano Largo (working title)", synopsis: "Two cousins spend their last summer in a Galician fishing village before one emigrates.",
       genre: "Spanish-language coming-of-age drama", originalLanguage: "Spanish",
-      comps: [{ name: "Roma", year: 2018 }, { name: "Alcarràs", year: 2022 }, { name: "Summer 1993", year: 2017 }, { name: "Y Tu Mamá También", year: 2001 }],
+      comps: filmControlComps("spanish-coming-of-age"),
       targetMarkets: BASE_MARKETS, costs: DEFAULT_COSTS, constraints: BASE_CONSTRAINTS,
     },
   },

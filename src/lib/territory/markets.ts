@@ -52,3 +52,19 @@ export const REFERENCE_SETS: Array<{ id: string; titles: string[] }> = [
   { id: "animation", titles: ["Coco", "Moana", "Zootopia", "Encanto"] },
   { id: "action", titles: ["John Wick", "Mad Max: Fury Road", "The Raid", "Baby Driver"] },
 ];
+
+/**
+ * Unrelated-film controls for the claim check, in a fixed order fixed before any claim-check result was seen.
+ * Rule: use the first FILM_CONTROLS_USED sets that share no resolved comp with the brief. No other test
+ * (no overlap threshold, no result-dependent choice), so controls can't be picked to produce a desired answer.
+ * Known limit: a brief in the same genre as a control set gets a stricter test (more titles called generic, never fewer).
+ * Titles and years match the evaluation scenarios so cached Qloo evidence is reused.
+ */
+export const FILM_CONTROL_SETS: Array<{ id: string; comps: Array<{ name: string; year: number }> }> = [
+  { id: "crime-thriller", comps: [{ name: "Hell or High Water", year: 2016 }, { name: "Wind River", year: 2017 }, { name: "Sicario", year: 2015 }, { name: "Prisoners", year: 2013 }] },
+  { id: "spanish-coming-of-age", comps: [{ name: "Roma", year: 2018 }, { name: "Alcarràs", year: 2022 }, { name: "Summer 1993", year: 2017 }, { name: "Y Tu Mamá También", year: 2001 }] },
+  { id: "arthouse-drama", comps: [{ name: "Past Lives", year: 2023 }, { name: "Minari", year: 2020 }, { name: "Aftersun", year: 2022 }, { name: "Drive My Car", year: 2021 }] },
+];
+export const FILM_CONTROLS_USED = 2;
+
+export const filmControlComps = (id: string) => FILM_CONTROL_SETS.find((s) => s.id === id)!.comps;

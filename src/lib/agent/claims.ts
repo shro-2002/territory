@@ -1,6 +1,6 @@
 import type { CallRecord } from "../qloo/types";
 import { marketByCode } from "../territory/markets";
-import { catalogueSentence, internationalSentence, localOriginSentence } from "../territory/nearby-titles";
+import { catalogueSentence } from "../territory/nearby-titles";
 import type { LocalizationMode, Plan } from "../territory/planner";
 import type { AgentInput, MarketResearch } from "./agent";
 import type { ResolvedComp } from "./resolve";
@@ -45,10 +45,13 @@ export function claimsFor({ input, comps, research, plan, calls, modeReach }: Cl
       add(`${name}: research gap — ${r.evidenceGap}. This is missing evidence, not a reason to drop the market.`, "insufficient", ids);
       continue;
     }
-    const n = r.nearby;
-    add(`${name}: ${catalogueSentence(n, name)}${r.fallback ? " (after adding substitute comps)" : ""}`, "qloo", ids);
-    add(`${name}: ${localOriginSentence(n, name)}`, n.counts.localOrigin ? "qloo" : "insufficient", ids);
-    if (n.counts.international) add(`${name}: ${internationalSentence(n)}`, "qloo", ids);
+    add(`${name}: ${catalogueSentence(r.nearby, name)}${r.fallback ? " (after adding substitute comps)" : ""}`, "qloo", ids);
+    const check = r.claimCheck;
+    if (check) {
+      const p = check.provenance;
+      // Candidates are Qloo-sourced leads to verify; "no comparable" and "insufficient" are limits of the evidence.
+      add(`${name}: Claim check — ${check.decision} Next: ${check.action}`, check.status === "verify" ? "qloo" : "insufficient", [...p.local, ...p.genreControls, ...p.filmControls, ...p.crossMarket]);
+    }
   }
   if (plan.markets.length) add(`Markets were chosen from your candidate list in your priority order, within the budget and cap. Qloo evidence did not rank or select them.`, "user");
   for (const l of plan.languages) add(`${l.language} ${l.mode} costs $${l.costUsd.toLocaleString("en-US")} (user cost assumption).`, "user");

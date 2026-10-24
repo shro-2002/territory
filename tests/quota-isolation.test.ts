@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StreamMessage } from "@/app/api/agent/route";
-import { createMockFetch } from "@/lib/qloo/mock";
+import { createMockFetch, type MockOptions } from "@/lib/qloo/mock";
 import { QlooClient } from "@/lib/qloo/client";
 import { hasRedis, redis, storeMode } from "@/lib/server/redis";
 import { checkRateLimitShared, reserveQlooCalls } from "@/lib/server/rate-limit";
@@ -34,9 +34,9 @@ function fakeUpstash(store: Map<string, string>, log: string[][] = []) {
 }
 
 /** Routes Upstash traffic to the fake and any other URL (the Qloo API) to the mock, so no test touches the network. */
-function stubNetwork(store: Map<string, string>, log: string[][] = []) {
+function stubNetwork(store: Map<string, string>, log: string[][] = [], qlooOptions: MockOptions = {}) {
   const upstash = fakeUpstash(store, log);
-  const qloo = createMockFetch();
+  const qloo = createMockFetch(qlooOptions);
   const fetchStub = vi.fn(async (url: string | URL | Request, init?: RequestInit) => (String(url).startsWith(UPSTASH) ? upstash(url, init) : qloo(url as string, init)));
   vi.stubGlobal("fetch", fetchStub);
   return { upstash, fetchStub };
@@ -172,6 +172,37 @@ describe("live runs are metered exactly and capped", () => {
     expect(network).toBeGreaterThan(0);
     expect(result.calls.every((c) => c.source === "live")).toBe(true);
     expect(Number(store.get(DAY))).toBe(network);
+  });
+
+  it("charges retried requests too: the counter equals every HTTP attempt sent to Qloo", async () => {
+    withEnv({ ...credentials, TERRITORY_HOSTED: "1", QLOO_API_KEY: "test-key", SESSION_SECRET: "unit-test-secret-unit-test-secret-0123" });
+    const store = new Map<string, string>();
+    const { fetchStub } = stubNetwork(store, [], { rateLimitFirst: 2 });
+    const tag = randomUUID().slice(0, 8);
+    const input = { ...SHOWCASE_INPUT, targetMarkets: ["US"], comps: [{ name: `Past Lives ${tag}` }, { name: `Minari ${tag}` }, { name: `Aftersun ${tag}` }] };
+    const run = await post({ action: "run", input }, "198.51.100.9");
+    const result = run.messages.at(-1);
+    if (result?.type !== "result") throw new Error(`run failed: ${JSON.stringify(result)}`);
+    const sent = fetchStub.mock.calls.filter(([u]) => !String(u).startsWith(UPSTASH)).length;
+    expect(result.calls.filter((c) => c.status === 429)).toHaveLength(2);
+    expect(Number(store.get(DAY))).toBe(sent);
+  });
+
+  it("a run that needs more than its grant stops at the grant and degrades instead of overspending", async () => {
+    let sent = 0;
+    const qloo = createMockFetch();
+    const counting: typeof fetch = (u, i) => (sent++, qloo(u, i));
+    // source "live" so the budget is the metered quota path; fresh in-memory cache, so every request is a miss.
+    const client = new QlooClient({ apiKey: "k", source: "live", fetchImpl: counting, sleep: async () => {}, callBudget: 30 });
+    const { runAgent } = await import("@/lib/agent/agent");
+    const session = await runAgent(SHOWCASE_INPUT, { client });
+    expect(sent).toBe(30);
+    expect(client.meteredCallCount).toBe(30);
+    expect(session.status).not.toBe("complete");
+    // Missing evidence can only produce "insufficient", never a confident claim.
+    const checks = Object.values(session.research).map((r) => r.claimCheck?.status);
+    expect(checks.length).toBeGreaterThan(0);
+    expect(checks.every((c) => c === "insufficient")).toBe(true);
   });
 
   it("stays fail-closed: an exhausted counter grants zero live calls and the run reports it", async () => {

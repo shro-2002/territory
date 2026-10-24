@@ -85,47 +85,57 @@ export class QlooClient {
     return this.liveCalls;
   }
 
-  /** Requests that count against the real Qloo quota. A mock backend makes none, however many calls it serves. */
+  /** HTTP attempts (retries included) that count against the real Qloo quota. A mock backend makes none. */
   get meteredCallCount() {
     return this.source === "live" ? this.liveCalls : 0;
   }
 
   async search(query: string, types?: string[], take = 5): Promise<Entity[]> {
-    const raw = await this.get("/search", { query, types: types?.join(","), take });
-    const parsed = SearchResponseSchema.safeParse(raw);
+    return (await this.searchTraced(query, types, take)).data;
+  }
+
+  /** Like search(), plus the id of the call record that answered it (for provenance under concurrency). */
+  async searchTraced(query: string, types?: string[], take = 5): Promise<{ data: Entity[]; callId: string }> {
+    const { body, callId } = await this.request("/search", { query, types: types?.join(","), take });
+    const parsed = SearchResponseSchema.safeParse(body);
     if (!parsed.success) throw new QlooError("Unexpected /search response shape", "BAD_RESPONSE", undefined, { cause: parsed.error });
-    return parsed.data.results;
+    return { data: parsed.data.results, callId };
   }
 
   async insights(params: Params): Promise<InsightsResponse> {
+    return (await this.insightsTraced(params)).data;
+  }
+
+  /** Like insights(), plus the id of the call record that answered it (for provenance under concurrency). */
+  async insightsTraced(params: Params): Promise<{ data: InsightsResponse; callId: string }> {
     if (!params["filter.type"]) throw new QlooError("filter.type is required for /v2/insights", "BAD_RESPONSE");
-    const raw = await this.get("/v2/insights", params);
-    const parsed = InsightsResponseSchema.safeParse(raw);
+    const { body, callId } = await this.request("/v2/insights", params);
+    const parsed = InsightsResponseSchema.safeParse(body);
     if (!parsed.success) throw new QlooError("Unexpected /v2/insights response shape", "BAD_RESPONSE", undefined, { cause: parsed.error });
-    return parsed.data;
+    return { data: parsed.data, callId };
   }
 
   async get(path: string, params: Params): Promise<unknown> {
+    return (await this.request(path, params)).body;
+  }
+
+  private async request(path: string, params: Params): Promise<{ body: unknown; callId: string }> {
     const qs = encodeParams(params);
     const cacheKey = createHash("sha256").update(`${path}?${qs}`).digest("hex");
     const cached = await this.opts.cache.get(cacheKey);
     if (cached !== undefined) {
-      this.record({ path, params, status: 200, latencyMs: 0, cacheHit: true, resultCount: countResults(cached), attempt: 0 });
-      return cached;
+      return { body: cached, callId: this.record({ path, params, status: 200, latencyMs: 0, cacheHit: true, resultCount: countResults(cached), attempt: 0 }) };
     }
-    if (this.liveCalls >= this.opts.callBudget) {
-      throw new QlooError(this.opts.callBudget === 0 ? "live Qloo research unavailable (quota guard); only cached evidence can be used" : `Qloo call budget of ${this.opts.callBudget} exhausted`, "BUDGET_EXCEEDED");
-    }
-    if (Date.now() >= this.opts.deadlineAt) throw new QlooError("research time limit reached", "TIMEOUT");
-    this.liveCalls += 1;
-    const body = slimBody(await this.withSlot(() => this.fetchWithRetry(path, params, qs)));
-    await this.opts.cache.set(cacheKey, body);
-    return body;
+    const { body, callId } = await this.withSlot(() => this.fetchWithRetry(path, params, qs));
+    const slim = slimBody(body);
+    await this.opts.cache.set(cacheKey, slim);
+    return { body: slim, callId };
   }
 
-  private async fetchWithRetry(path: string, params: Params, qs: string): Promise<unknown> {
+  private async fetchWithRetry(path: string, params: Params, qs: string): Promise<{ body: unknown; callId: string }> {
     const url = `${this.opts.baseUrl}${path}?${qs}`;
     for (let attempt = 1; ; attempt++) {
+      this.claimNetworkAttempt();
       const started = Date.now();
       const controller = new AbortController();
       // Never let one call outlive the request deadline.
@@ -140,8 +150,7 @@ export class QlooClient {
         const latencyMs = Date.now() - started;
         if (res.ok) {
           const body = await res.json();
-          this.record({ path, params, status: res.status, latencyMs, cacheHit: false, resultCount: countResults(body), attempt });
-          return body;
+          return { body, callId: this.record({ path, params, status: res.status, latencyMs, cacheHit: false, resultCount: countResults(body), attempt }) };
         }
         const errText = (await res.text().catch(() => "")).slice(0, 300);
         this.record({ path, params, status: res.status, latencyMs, cacheHit: false, resultCount: 0, attempt, error: errText });
@@ -165,6 +174,18 @@ export class QlooClient {
     }
   }
 
+  /**
+   * Every HTTP attempt, retries and timed-out attempts included, counts against the reserved budget. Checked and
+   * counted synchronously right before the request is sent, so concurrent calls can never overshoot the reservation.
+   */
+  private claimNetworkAttempt() {
+    if (this.liveCalls >= this.opts.callBudget) {
+      throw new QlooError(this.opts.callBudget === 0 ? "live Qloo research unavailable (quota guard); only cached evidence can be used" : `Qloo call budget of ${this.opts.callBudget} exhausted`, "BUDGET_EXCEEDED");
+    }
+    if (Date.now() >= this.opts.deadlineAt) throw new QlooError("research time limit reached", "TIMEOUT");
+    this.liveCalls += 1;
+  }
+
   private async withSlot<T>(fn: () => Promise<T>): Promise<T> {
     if (this.active >= this.opts.concurrency) await new Promise<void>((r) => this.queue.push(r));
     this.active += 1;
@@ -176,8 +197,10 @@ export class QlooClient {
     }
   }
 
-  private record(rec: Omit<CallRecord, "id" | "source">) {
-    this.calls.push({ ...rec, id: `${this.opts.callIdPrefix}${this.calls.length + 1}`, source: this.source });
+  private record(rec: Omit<CallRecord, "id" | "source">): string {
+    const id = `${this.opts.callIdPrefix}${this.calls.length + 1}`;
+    this.calls.push({ ...rec, id, source: this.source });
+    return id;
   }
 }
 

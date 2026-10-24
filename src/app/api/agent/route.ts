@@ -8,7 +8,7 @@ import { createQlooClient, qlooSource } from "@/lib/qloo/factory";
 import type { CallRecord } from "@/lib/qloo/types";
 import { researchDeadlineMs } from "@/lib/server/hosting";
 import { checkRateLimitShared, clientIp, reserveQlooCalls } from "@/lib/server/rate-limit";
-import { decrypt, encrypt, seal, SealConfigError, verifySeal } from "@/lib/server/seal";
+import { decrypt, encryptContext, MAX_CONTEXT_CHARS, seal, SealConfigError, verifySeal } from "@/lib/server/seal";
 import { ConstraintsPatchSchema } from "@/lib/territory/planner";
 
 // Below the stricter host limit (Netlify 60 s synchronous); research itself stops at researchDeadlineMs().
@@ -21,7 +21,7 @@ const BodySchema = z.discriminatedUnion("action", [
     action: z.literal("replan"),
     session: z.unknown(),
     token: z.string().min(10).max(200),
-    context: z.string().min(10).max(300_000),
+    context: z.string().min(10).max(MAX_CONTEXT_CHARS),
     patch: ConstraintsPatchSchema,
   }),
 ]);
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
         // Only what the UI shows leaves the server: no raw neighbourhood lists, no undisplayed entity ids.
         const research = Object.fromEntries(Object.entries(session.research).map(([k, r]) => [k, { ...r, localNeighbourIds: [] }]));
         const publicSession: Session = { ...session, research, context: null };
-        send({ type: "result", session: publicSession, token: seal(publicSession), context: session.context ? encrypt(session.context) : null, calls: client.calls });
+        send({ type: "result", session: publicSession, token: seal(publicSession), context: session.context ? encryptContext(session.context) : null, calls: client.calls });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unexpected error";
         const code = err instanceof SealConfigError ? "CONFIG" : message.startsWith("Invalid input") || message.startsWith("Unsupported") ? "INVALID_INPUT" : "AGENT_ERROR";

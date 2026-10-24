@@ -4,7 +4,7 @@ import type { QlooClient } from "../qloo/client";
 import { MARKETS, marketByCode, REFERENCE_SETS } from "../territory/markets";
 import { buildPlan, Constraints, ConstraintsSchema, LanguageCostSchema, MODE_REACH, Plan, validatePlan } from "../territory/planner";
 import { Claim, claimsFor } from "./claims";
-import { buildContext, MarketResearch, ResearchContext, researchMarket, substituteContext } from "./research";
+import { attachClaimChecks, buildContext, MarketResearch, ResearchContext, researchMarket, substituteContext } from "./research";
 import { resolveComp, ResolvedComp } from "./resolve";
 
 export type { MarketResearch } from "./research";
@@ -78,7 +78,9 @@ export interface Revision {
   changes: PlanChange[];
 }
 
-// Worst case: 12 markets x 10 calls + comps/baselines + fallback retries ≈ 200.
+// Worst case: 12 markets x 14 calls (comps, 4 genre and 2 film controls, 2 pages each) + ~44 for comps, baselines and
+// film-control lookups = 212, plus fallback and HTTP retries. Every HTTP attempt is metered against this per-request
+// reservation; past it no request is sent, the affected research fails and the claim check reports insufficient evidence.
 export const LIMITS = { maxQlooCalls: 220, maxReserveResearch: 3, maxFallbackMarkets: 4 } as const;
 
 class Tracer {
@@ -165,7 +167,9 @@ function marketLine(r: MarketResearch) {
   const name = marketByCode(r.code).name;
   if (r.evidenceGap) return `${name}: evidence gap — ${r.evidenceGap}`;
   const n = r.nearby;
-  return `${name}: ${r.titlesFound} associated titles; ${n.genericCount} also returned for unrelated genres, ${r.titlesFound - n.genericCount} distinctive under ${n.controlsTested} controls (${n.counts.localOrigin} with verified local origin)`;
+  const f = r.evidence;
+  const film = f ? (f.filmControls.length ? `; ${f.survivors.length} also pass ${f.filmControls.length} unrelated-film controls` : `; unrelated-film controls unavailable (${f.filmGap ?? "unknown"})`) : "";
+  return `${name}: ${r.titlesFound} associated titles; ${n.genericCount} also returned for unrelated genres, ${r.titlesFound - n.genericCount} pass ${n.controlsTested} genre controls${film}`;
 }
 
 /** Thin evidence → widen comps with the comps' closest Qloo titles and retry those markets, once. */
@@ -187,7 +191,9 @@ async function verifyAndFallback(client: QlooClient, research: Record<string, Ma
   t.log("EVIDENCE_VERIFICATION", `Thin evidence in ${thin.map((r) => r.code).join(", ")}; retried with Qloo's closest titles (${widened.added.join(", ")}). Now: ${thin.map((r) => `${r.code} ${research[r.code].evidenceGap ? "still a gap" : "qualified"}`).join(", ")}.`);
 }
 
-function finish(input: AgentInput, comps: ResolvedComp[], context: ResearchContext, research: Record<string, MarketResearch>, t: Tracer, client: QlooClient, revisions: Revision[], version = 1): Session {
+function finish(input: AgentInput, comps: ResolvedComp[], researchedContext: ResearchContext, gathered: Record<string, MarketResearch>, t: Tracer, client: QlooClient, revisions: Revision[], version = 1): Session {
+  const { context, research } = attachClaimChecks(researchedContext, gathered);
+  const checks = Object.values(research).map((r) => `${r.code} ${r.claimCheck!.status}${r.claimCheck!.status === "verify" ? ` (${r.claimCheck!.candidateCount})` : ""}`);
   const candidates = Object.keys(research).map((code, i) => ({ ...marketByCode(code), priority: priorityOf(input, code, i) }));
   const plan = buildPlan({ candidates, constraints: input.constraints, costs: input.costs, originalLanguage: input.originalLanguage });
   t.log(version === 1 ? "STRATEGY_CONSTRUCTION" : "STRATEGY_REVISION", plan.markets.length ? `Selected ${plan.markets.map((m) => `${m.code} (${m.mode})`).join(", ")} for $${plan.totalCostUsd.toLocaleString("en-US")}` : "No candidate market fits the budget, cap and exclusions.");
@@ -195,7 +201,7 @@ function finish(input: AgentInput, comps: ResolvedComp[], context: ResearchConte
   t.log(version === 1 ? "CONSTRAINT_VALIDATION" : "VERIFICATION", violations.length ? `VIOLATIONS: ${violations.join("; ")}` : "Independent check passed: budget, market cap, exclusions and subtitle rule satisfied.");
   const claims = claimsFor({ input, comps, research, plan, calls: client.calls, modeReach: MODE_REACH });
   const supported = Object.values(research).filter((r) => !r.evidenceGap).length;
-  t.log("FINAL_REPORT", `${claims.length} claims: ${countBy(claims)}. Qloo associations qualified in ${supported}/${Object.keys(research).length} markets; market selection used only your priority order, costs and constraints.`);
+  t.log("FINAL_REPORT", `${claims.length} claims: ${countBy(claims)}. Qloo associations qualified in ${supported}/${Object.keys(research).length} markets. Claim check (genre controls, unrelated-film controls, cross-market): ${checks.join(", ")}; "verify" means candidates for human review, never established local matches. Market selection used only your priority order, costs and constraints.`);
   return {
     version, input, comps, context, research, plan, violations, claims, trace: t.events, revisions,
     status: violations.length ? "failed" : supported < Object.keys(research).length || comps.some((c) => c.status !== "resolved") ? "degraded" : "complete",
@@ -318,7 +324,7 @@ function modeReason(from: string, to: string, after?: Constraints) {
 }
 
 function summarizeResearch(codes: string[], research: Record<string, MarketResearch>) {
-  return codes.map((c) => `${c} ${research[c].evidenceGap ? "gap" : `${research[c].nearby.counts.localOrigin + research[c].nearby.counts.international + research[c].nearby.counts.originUnknown} distinctive`}`).join(", ");
+  return codes.map((c) => `${c} ${research[c].evidenceGap ? "gap" : `${research[c].nearby.counts.localOrigin + research[c].nearby.counts.international + research[c].nearby.counts.originUnknown} pass genre controls`}`).join(", ");
 }
 
 /** The filmmaker's selection order; Territory-suggested reserves rank after the whole list, in suggestion order. */

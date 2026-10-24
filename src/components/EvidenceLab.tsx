@@ -45,10 +45,13 @@ const PROVENANCE_MEANING: Record<Provenance, string> = {
   external: "From a non-Qloo source",
 };
 
-function localOriginCell(r: MarketResearch): string {
+function candidatesCell(r: MarketResearch): string {
   if (r.evidenceGap) return `Gap: ${r.evidenceGap}`;
-  if (r.nearby.localOrigin.length) return r.nearby.localOrigin.slice(0, 4).join(", ");
-  return r.nearby.counts.originUnknown ? "None verified (origin not recorded)" : "None found under controls";
+  const k = r.claimCheck;
+  if (!k) return "Not claim-checked";
+  if (k.status === "insufficient") return "Insufficient evidence (controls missing)";
+  if (!k.candidates.length) return "None survived (not proof none exist)";
+  return `${k.candidates.map((c) => c.name).join(", ")} — origin and format unverified`;
 }
 
 export function EvidenceLab({ session, calls, summary, trace, isRunning, startedAt, lastCalls }: Props) {
@@ -85,7 +88,7 @@ function PlainEnglish({ session, lastCalls }: { session: Session; lastCalls: { l
     <div className="grid gap-8 lg:grid-cols-2">
       <div className="space-y-4 text-[0.95rem] leading-relaxed text-bone-dim">
         <p>Qloo is a taste graph. Territory asks it one question about <span className="text-bone">{comps}</span>: which films do audiences who love these also love?</p>
-        <p>It asks again inside each country, and again for four unrelated genres there. Titles that come back for those genres too are <span className="text-bone">the country&apos;s general catalogue</span>; the rest are distinctive associations worth investigating.</p>
+        <p>It asks again inside each country, and again for four unrelated genres there. Titles that come back for those genres too are <span className="text-bone">the country&apos;s general catalogue</span>. The rest are tested again against unrelated films and the other markets; the few that survive are candidates to verify, not proven local matches.</p>
         <p>Separately, the planner fits your candidate markets, in your priority order, to your budget with plain arithmetic. Qloo evidence never enters it, and nothing here predicts box office, audience size or demand{lastCalls ? `, and it made ${lastCalls.live + lastCalls.cached} Qloo requests to get here (${lastCalls.live} live).` : "."}</p>
       </div>
       <div>
@@ -115,7 +118,7 @@ function EvidenceDetail({ session }: { session: Session }) {
       <div className="overflow-x-auto">
         <p className="eyebrow mb-3">Market by market</p>
         <table className="w-full min-w-[40rem] text-left text-sm">
-          <thead className="text-xs text-bone-faint"><tr><th className="pb-2 font-normal">Market</th><th className="pb-2 font-normal">Associated</th><th className="pb-2 font-normal">General catalogue</th><th className="pb-2 font-normal">Distinctive</th><th className="pb-2 font-normal">Distinctive local-origin titles</th></tr></thead>
+          <thead className="text-xs text-bone-faint"><tr><th className="pb-2 font-normal">Market</th><th className="pb-2 font-normal">Associated</th><th className="pb-2 font-normal">General catalogue</th><th className="pb-2 font-normal">Pass genre controls</th><th className="pb-2 font-normal">Candidates to verify (all controls)</th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.code} className="border-t border-line align-top">
@@ -123,7 +126,7 @@ function EvidenceDetail({ session }: { session: Session }) {
                 <td className="py-2 pr-3 tabular-nums">{r.titlesFound}</td>
                 <td className="py-2 pr-3 tabular-nums text-bone-dim">{r.evidenceGap ? "—" : r.nearby.genericCount}</td>
                 <td className="py-2 pr-3 tabular-nums text-bone-dim">{r.evidenceGap ? "—" : r.titlesFound - r.nearby.genericCount}</td>
-                <td className="py-2 text-bone-dim">{localOriginCell(r)}</td>
+                <td className="py-2 text-bone-dim">{candidatesCell(r)}</td>
               </tr>
             ))}
           </tbody>

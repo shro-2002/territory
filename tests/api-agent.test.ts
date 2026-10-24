@@ -33,12 +33,19 @@ describe("POST /api/agent", () => {
     // Only a few labelled catalogue examples per market, never the neighbourhood list itself.
     const exposed = new Set(JSON.stringify(result).match(/Related [0-9a-f]{6}/g) ?? []);
     expect(exposed.size).toBeLessThanOrEqual(Object.keys(result.session.research).length * SHOWN_PER_GROUP);
+    expect(JSON.stringify(result.session.research)).not.toContain('"evidence"');
+    for (const r of Object.values(result.session.research)) expect(r.claimCheck!.candidates.length).toBeLessThanOrEqual(SHOWN_PER_GROUP);
 
     const target = result.session.plan.markets[0].code;
     const re = await post({ action: "replan", session: result.session, token: result.token, context: result.context, patch: { excludedMarkets: [target] } }, "203.0.113.10");
     const revised = re.messages.at(-1);
     expect(revised?.type).toBe("result");
-    if (revised?.type === "result") expect(revised.session.plan.markets.map((m) => m.code)).not.toContain(target);
+    if (revised?.type === "result") {
+      expect(revised.session.plan.markets.map((m) => m.code)).not.toContain(target);
+      // Claim-check evidence travels only inside the encrypted context and is restored from it for the revision.
+      expect(JSON.stringify(revised.session.research)).not.toContain('"evidence"');
+      expect(Object.values(revised.session.research).every((r) => r.evidenceGap || (r.claimCheck && r.claimCheck.status !== "insufficient"))).toBe(true);
+    }
   });
 
   it("a budget-only patch keeps earlier exclusions (no schema defaults leak into the patch)", async () => {

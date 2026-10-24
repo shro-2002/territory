@@ -1,11 +1,19 @@
 import type { Session } from "@/lib/agent/agent";
+import type { Candidate } from "@/lib/territory/claim-check";
 import { NEIGHBOURHOOD_SIZE } from "@/lib/territory/market-signal";
 import { marketByCode } from "@/lib/territory/markets";
-import { catalogueSentence, internationalSentence, localOriginSentence } from "@/lib/territory/nearby-titles";
+import { catalogueSentence } from "@/lib/territory/nearby-titles";
 import { MODE_REACH } from "@/lib/territory/planner";
 import { candidateRank, nextSteps } from "@/lib/territory/view-model";
 
 const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
+const CHECK_LABEL = { verify: "candidates to verify", none: "no local comparable established", insufficient: "insufficient evidence" } as const;
+
+function originLabel(c: Candidate, marketName: string): string {
+  if (c.origin === "local") return `Qloo-recorded ${marketName} origin`;
+  if (c.origin === "elsewhere") return `recorded origin ${c.originCountries.join("/")}`;
+  return "origin not recorded";
+}
 
 /** Distributor research brief as Markdown, built only from the session's plan, research, revisions and claims. */
 export function briefMarkdown(s: Session, source: "live" | "mock"): string {
@@ -33,19 +41,26 @@ export function briefMarkdown(s: Session, source: "live" | "mock"): string {
     L.push(s.violations.length ? `**Constraint violations:** ${s.violations.join("; ")}.` : "All budget, market-cap, exclusion and subtitle constraints verified independently.", "");
   }
 
-  L.push("## 2. Qloo cultural associations, market by market", "", `For each market, the ${NEIGHBOURHOOD_SIZE} titles Qloo associates with the comps there are checked against the same market's associations for four unrelated reference genres. Titles that also appear for those genres are the country's general catalogue. The rest are distinctive only relative to the genres tested. None of this measures audience preference or demand.`, "");
-  L.push("| Market | Your priority | In scenario | Associated titles | General catalogue | Distinctive under controls | Verified local origin |", "|---|---|---|---|---|---|---|");
+  L.push("## 2. Cultural claim check, market by market", "", `For each market, the ${NEIGHBOURHOOD_SIZE} titles Qloo associates with the comps there are tested against the same market's associations for four unrelated genres, then for unrelated films (the first two preset film sets sharing no comp with yours), then against the other researched markets' lists. A survivor is a candidate to verify, not a proven local match: surviving the controls does not prove film specificity, appearing in a control does not prove irrelevance, and "not listed elsewhere" covers only the researched markets' top-${NEIGHBOURHOOD_SIZE} lists. A missing production origin is unknown. Qloo records no release format, so every candidate needs a human check. None of this measures audience preference or demand.`, "");
+  L.push("| Market | Your priority | In scenario | Associated titles | Pass genre controls | Pass film controls | Candidates to verify | Decision |", "|---|---|---|---|---|---|---|---|");
   for (const r of qualified) {
     const m = marketByCode(r.code);
     const d = s.plan.markets.find((x) => x.code === r.code);
     const ex = s.plan.excluded.find((x) => x.code === r.code);
-    const c2 = r.nearby.counts;
-    L.push(`| ${m.name} | ${priority(r.code)} | ${d ? `**${d.mode}**` : ex ? `no (${ex.reason})` : "no (cap or budget)"} | ${r.titlesFound} | ${r.nearby.genericCount} | ${c2.localOrigin + c2.international + c2.originUnknown} | ${c2.localOrigin}${c2.originUnknown ? ` (origin not recorded for ${c2.originUnknown})` : ""} |`);
+    const f = r.claimCheck?.funnel;
+    L.push(`| ${m.name} | ${priority(r.code)} | ${d ? `**${d.mode}**` : ex ? `no (${ex.reason})` : "no (cap or budget)"} | ${r.titlesFound} | ${f ? f.afterGenre : "—"} | ${f ? f.afterFilm : "—"} | ${f ? f.afterCrossMarket : "—"} | ${r.claimCheck ? CHECK_LABEL[r.claimCheck.status] : "—"} |`);
   }
   L.push("");
   for (const r of qualified) {
     const name = marketByCode(r.code).name;
-    L.push(`- **${name}:** ${[catalogueSentence(r.nearby, name), localOriginSentence(r.nearby, name), internationalSentence(r.nearby)].filter(Boolean).join(" ")}`);
+    const k = r.claimCheck;
+    L.push(`### ${name}`, "", catalogueSentence(r.nearby, name), "");
+    if (!k) continue;
+    L.push(`**Decision:** ${k.decision}`, "", `**Next research action:** ${k.action}`, "");
+    if (k.candidates.length) L.push(`Candidates (format-unverified): ${k.candidates.map((c) => `${c.name} (${originLabel(c, name)})`).join("; ")}.`, "");
+    if (k.failedStronger.count) L.push(`Passed the genre-only filter but failed an unrelated-film control or the cross-market check: ${k.failedStronger.count} (e.g. ${k.failedStronger.names.join(", ")}).`, "");
+    const p = k.provenance;
+    L.push(`Qloo requests: comps in ${name} ${p.local.join(", ") || "none"}; genre controls ${p.genreControls.join(", ") || "none"}; unrelated-film controls ${p.filmControls.join(", ") || "none"}; other markets' lists ${p.crossMarket.length} calls.`, "");
   }
   if (gaps.length) L.push("", `**Research gaps (missing evidence, not a reason to drop a market):** ${gaps.map((r) => `${marketByCode(r.code).name} — ${r.evidenceGap}`).join("; ")}.`);
   L.push("");
@@ -65,7 +80,7 @@ export function briefMarkdown(s: Session, source: "live" | "mock"): string {
 
   L.push(`## ${s.revisions.length ? 5 : 4}. Assumptions and uncertainty`, "");
   L.push(
-    "- Qloo associations are titles related to the comps, qualified against four genre controls. They are **not** audience preferences, demand, box-office or buyer-interest evidence.",
+    "- Qloo associations are titles related to the comps, qualified against four genre controls and two unrelated-film controls. They are **not** audience preferences, demand, box-office or buyer-interest evidence.",
     "- An earlier taste-portability score was retired after an audit found it mostly measured each country's general catalogue; it plays no part in this brief.",
     "- Location-conditioned Qloo movie data covers titles released 2018 or later; older comps contribute only through their post-2018 neighbourhood.",
     "- An unreleased film is represented entirely by its comps; different comps can change every result.",

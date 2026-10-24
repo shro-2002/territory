@@ -5,7 +5,7 @@ import { assertClaimsGrounded } from "@/lib/agent/claims";
 import { pickCandidate } from "@/lib/agent/resolve";
 import { QlooClient } from "@/lib/qloo/client";
 import { createMockFetch, MOCK_PREFIX } from "@/lib/qloo/mock";
-import { MARKETS } from "@/lib/territory/markets";
+import { FILM_CONTROL_SETS, MARKETS } from "@/lib/territory/markets";
 
 const client = () => new QlooClient({ apiKey: "mock", source: "mock", fetchImpl: createMockFetch(), sleep: async () => {}, callBudget: LIMITS.maxQlooCalls * 2 });
 
@@ -19,6 +19,48 @@ const input = {
   costs: { French: { subtitleUsd: 3000, dubUsd: 30000 }, German: { subtitleUsd: 3000, dubUsd: 30000 }, Spanish: { subtitleUsd: 3000, dubUsd: 25000 }, Korean: { subtitleUsd: 4000, dubUsd: 35000 }, Japanese: { subtitleUsd: 4000, dubUsd: 35000 }, Italian: { subtitleUsd: 3000, dubUsd: 28000 }, Portuguese: { subtitleUsd: 3000, dubUsd: 25000 } },
   constraints: { budgetUsd: 70000, maxMarkets: 5 },
 };
+
+describe("cultural claim check", () => {
+  // Same mock backend, but every lookup of an unrelated-film control title fails: the claim evidence changes, nothing else.
+  const filmControlsDown = () => {
+    const mock = createMockFetch();
+    const blocked = FILM_CONTROL_SETS.flatMap((set) => set.comps.map((c) => c.name.toLowerCase()));
+    const fetchImpl: typeof fetch = async (req, init) => {
+      const q = new URL(String(req)).searchParams.get("query")?.toLowerCase();
+      return q && blocked.includes(q) && !input.comps.some((c) => c.name.toLowerCase() === q) ? new Response("down", { status: 500 }) : mock(req, init);
+    };
+    return new QlooClient({ apiKey: "mock", source: "mock", fetchImpl, sleep: async () => {}, maxRetries: 0, callBudget: LIMITS.maxQlooCalls * 2 });
+  };
+
+  it("gives every qualified market one decision and keeps the evidence behind it server-side", async () => {
+    const c = client();
+    const s = await runAgent(input, { client: c });
+    const sent = new Map(c.calls.map((x) => [x.id, x]));
+    expect(s.context!.filmControls!.map((f) => f.id)).toEqual(["crime-thriller", "spanish-coming-of-age"]);
+    for (const r of Object.values(s.research)) {
+      expect(r.evidence).toBeUndefined();
+      expect(r.claimCheck?.status).toMatch(/^(verify|none)$/);
+      expect(r.claimCheck!.provenance.filmControls.length).toBeGreaterThan(0);
+      // Grounded: every cited request was actually made, succeeded, and the film-control ones were conditioned on this market.
+      const p = r.claimCheck!.provenance;
+      expect([...p.local, ...p.genreControls, ...p.filmControls, ...p.crossMarket].every((id) => sent.get(id)?.status === 200)).toBe(true);
+      expect(p.filmControls.every((id) => sent.get(id)!.params["signal.location.query"] === MARKETS.find((m) => m.code === r.code)!.locationQuery)).toBe(true);
+    }
+    const decisions = s.claims.filter((cl) => cl.text.includes("Claim check —"));
+    expect(decisions).toHaveLength(input.targetMarkets.length);
+    expect(decisions.every((cl) => cl.callIds.length > 0)).toBe(true);
+    expect(Object.keys(s.context!.evidence!).sort()).toEqual([...input.targetMarkets].sort());
+  });
+
+  it("decisions follow the Qloo evidence while the localization plan does not", async () => {
+    const full = await runAgent(input, { client: client() });
+    const degraded = await runAgent(input, { client: filmControlsDown() });
+    expect(degraded.context!.filmControls).toEqual([]);
+    expect(Object.values(degraded.research).every((r) => r.claimCheck!.status === "insufficient" && r.claimCheck!.candidates.length === 0)).toBe(true);
+    expect(Object.values(full.research).some((r) => r.claimCheck!.status !== "insufficient")).toBe(true);
+    expect(degraded.plan).toEqual(full.plan);
+  });
+});
 
 describe("pickCandidate (disambiguation)", () => {
   const e = (name: string, subtype: string, year: number, popularity: number) => ({ entity_id: `${name}-${subtype}-${year}`, name, subtype, popularity, properties: { release_year: year } });
@@ -114,7 +156,8 @@ describe("replan (Distribution War Room)", () => {
     expect(rev.decisions.map((d) => d.action)).toContain("research_reserve_markets");
     expect(MARKETS.find((m) => m.code === rev.newlyResearched[0])?.language).toBe("German");
     const usableRefs = s1.context!.references.filter((r) => r.ids.length && r.globalIds.length).length;
-    expect(c.liveCallCount - callsBefore).toBe(rev.newlyResearched.length * 2 * (1 + usableRefs));
+    // Two pages each for the comps, every usable genre control and every unrelated-film control, per reserve market.
+    expect(c.liveCallCount - callsBefore).toBe(rev.newlyResearched.length * 2 * (1 + usableRefs + s1.context!.filmControls!.length));
     expect(rev.decisions.find((d) => d.action === "research_reserve_markets")!.reason).toMatch(/not audience evidence/);
   });
 

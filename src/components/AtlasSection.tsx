@@ -19,7 +19,7 @@ export function AtlasSection({ session, selected, pending, onSelect }: Props) {
   return (
     <section aria-labelledby="atlas-title" className="mx-auto max-w-[1320px] px-4 pt-32 sm:px-8">
       <SectionHead id="atlas" eyebrow="Cultural market atlas" title={<span id="atlas-title">Every candidate market, and what Qloo found there.</span>}>
-        Select a country to see what Qloo associates with your comps there: which titles are general catalogue, which are distinctive under four genre controls, and what to investigate next.
+        Select a country to see what Qloo associates with your comps there: which titles are general catalogue, which survive every control as candidates to verify, and what to investigate next.
       </SectionHead>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)]">
         <div className="panel p-4 sm:p-6">

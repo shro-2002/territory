@@ -73,6 +73,6 @@ export function pickCandidate(input: CompInput, candidates: Entity[]): Omit<Reso
 }
 
 export async function resolveComp(client: QlooClient, input: CompInput): Promise<ResolvedComp> {
-  const results = await client.search(input.name, FILM_TYPES, SEARCH_TAKE);
-  return { ...pickCandidate(input, results), callId: client.calls.at(-1)?.id };
+  const { data: results, callId } = await client.searchTraced(input.name, FILM_TYPES, SEARCH_TAKE);
+  return { ...pickCandidate(input, results), callId };
 }

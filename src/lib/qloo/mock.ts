@@ -26,6 +26,8 @@ const MOCK_CATALOG = [
   // Reference genre sets (src/lib/territory/markets.ts) so mock runs can build baselines.
   "Hereditary", "Get Out", "The Witch", "Midsommar", "Bridesmaids", "Superbad", "The Hangover", "Step Brothers",
   "Moana", "Zootopia", "Encanto", "John Wick", "Mad Max: Fury Road", "The Raid", "Baby Driver",
+  // Unrelated-film control sets (FILM_CONTROL_SETS) not already listed.
+  "Hell or High Water", "Wind River", "Sicario", "Prisoners", "Alcarràs", "Summer 1993",
 ];
 
 function hash01(...parts: string[]): number {

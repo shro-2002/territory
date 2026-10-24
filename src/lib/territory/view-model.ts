@@ -1,13 +1,13 @@
 import type { MarketResearch, Revision, Session } from "../agent/agent";
+import type { ClaimStatus } from "./claim-check";
 import { marketByCode } from "./markets";
-import { SHOWN_PER_GROUP } from "./nearby-titles";
 import type { LocalizationMode, Plan } from "./planner";
 
 /**
  * Presentation-only derivations. Everything here is computed from a Session's plan, research and
  * constraints; nothing is estimated or invented. Markets are never ranked or graded by Qloo evidence:
  * the plan follows the filmmaker's priority order and stated costs, and Qloo evidence is shown as
- * associations to investigate (catalogue vs distinctive under four genre controls), never as demand.
+ * associations to investigate (general catalogue vs candidates that survive the claim check), never as demand.
  */
 
 export const MODE_LABEL: Record<LocalizationMode, string> = { original: "Original language", subtitle: "Subtitles", dub: "Dubbing" };
@@ -21,22 +21,30 @@ export interface EvidenceSummary {
   gap: string | null;
   titlesFound: number;
   catalogue: number;
-  distinctive: number;
-  localOrigin: number;
-  originUnknown: number;
-  controlsTested: number;
+  /** Claim-check outcome; null when the market has no claim check. */
+  claim: ClaimStatus | null;
+  /** Titles that survived every tested control: candidates to verify, never established local matches. */
+  candidates: number;
 }
 
 export function evidenceSummary(r: MarketResearch | undefined): EvidenceSummary {
-  if (!r) return { gap: "Not researched", titlesFound: 0, catalogue: 0, distinctive: 0, localOrigin: 0, originUnknown: 0, controlsTested: 0 };
-  const c = r.nearby.counts;
-  return { gap: r.evidenceGap ?? null, titlesFound: r.titlesFound, catalogue: r.nearby.genericCount, distinctive: c.localOrigin + c.international + c.originUnknown, localOrigin: c.localOrigin, originUnknown: c.originUnknown, controlsTested: r.nearby.controlsTested };
+  if (!r) return { gap: "Not researched", titlesFound: 0, catalogue: 0, claim: null, candidates: 0 };
+  return { gap: r.evidenceGap ?? null, titlesFound: r.titlesFound, catalogue: r.nearby.genericCount, claim: r.claimCheck?.status ?? null, candidates: r.claimCheck?.candidateCount ?? 0 };
 }
 
-/** One short line on what Qloo found, e.g. "67 of 100 associated titles are general catalogue; 33 distinctive under 4 controls." */
+export const CLAIM_BADGE: Record<ClaimStatus, (n: number) => string> = {
+  verify: (n) => `${n} candidate${n === 1 ? "" : "s"} to verify`,
+  none: () => "No local comparable established",
+  insufficient: () => "Insufficient evidence",
+};
+
+/** One short line on what Qloo found, e.g. "67 of 100 associated titles are general catalogue here; 1 survives every tested control…" */
 export function evidenceLine(e: EvidenceSummary): string {
   if (e.gap) return `Research gap: ${e.gap}.`;
-  return `${e.catalogue} of ${e.titlesFound} associated titles are general catalogue here; ${e.distinctive} are distinctive under ${e.controlsTested} genre controls${e.localOrigin ? `, ${e.localOrigin} with verified local production origin` : ""}.`;
+  const base = `${e.catalogue} of ${e.titlesFound} associated titles are general catalogue here`;
+  if (e.claim === "verify") return `${base}; ${e.candidates} survive${e.candidates === 1 ? "s" : ""} every tested control and need${e.candidates === 1 ? "s" : ""} human verification before being cited.`;
+  if (e.claim === "none") return `${base}; none survives every tested control, so no local comparable is established (not proof that none exists).`;
+  return `${base}; the claim check could not run in full, so no local comparable is claimed.`;
 }
 
 export interface StrategyItem {
@@ -48,7 +56,8 @@ export interface StrategyItem {
   /** 1-based position in the filmmaker's candidate list; null for a Territory-suggested reserve. */
   priority: number | null;
   evidence: EvidenceSummary;
-  localOrigin: string[];
+  /** Claim-check candidates (at most a few): to verify, never established local matches. */
+  candidates: string[];
   reason: string;
 }
 
@@ -81,7 +90,7 @@ export function strategyItems(session: Session): StrategyItem[] {
       formatLabel: formatLabel(m.mode, m.language),
       priority: candidateRank(session, m.code),
       evidence: evidenceSummary(r),
-      localOrigin: r?.nearby.localOrigin.slice(0, 3) ?? [],
+      candidates: r?.claimCheck?.candidates.slice(0, 3).map((c) => c.name) ?? [],
       reason: `${priorityReason(m.code, session)} ${costReason(m, session.plan)}`,
     };
   });
@@ -95,13 +104,13 @@ export function uncertainties(session: Session): string[] {
   const researched = Object.values(session.research);
   const gaps = researched.filter((r) => r.evidenceGap).map((r) => marketByCode(r.code).name);
   if (gaps.length) out.push(`Research gaps for ${listNames(gaps)}: Qloo associations could not be qualified there. That is missing evidence, not a reason to drop them.`);
-  const unknownOrigin = researched.filter((r) => !r.evidenceGap && r.nearby.counts.originUnknown > 0).map((r) => marketByCode(r.code).name);
-  if (unknownOrigin.length) out.push(`Production origin was not recorded for some distinctive titles in ${listNames(unknownOrigin)}, so local-origin links there are unverified.`);
+  const unknownOrigin = researched.filter((r) => r.claimCheck?.candidates.some((c) => c.origin === "unknown")).map((r) => marketByCode(r.code).name);
+  if (unknownOrigin.length) out.push(`Production origin was not recorded for some candidate titles in ${listNames(unknownOrigin)}, so local-origin links there are unverified.`);
   for (const comp of session.comps) {
     if (comp.status === "ambiguous") out.push(`"${comp.input.name}" matches more than one title in Qloo; Territory used ${comp.name ?? "the closest match"}${comp.year ? ` (${comp.year})` : ""}. Add a release year to the brief to be sure.`);
     if (comp.status === "unresolved") out.push(`"${comp.input.name}" was not found in Qloo, so it did not shape any result.`);
   }
-  out.push("Most titles Qloo associates with your comps in a country are that country's general catalogue. \"Distinctive\" means only: not returned for four unrelated genres there.");
+  out.push("Most titles Qloo associates with your comps in a country are that country's general catalogue. A candidate only survived the tested controls: that is not proof it is specific to your film.");
   out.push("Nothing here measures audience preference, buyer interest or demand. Markets were chosen by your priority order and costs, not by Qloo.");
   out.push("An unreleased film is represented by its comps; different comps change every association.");
   return out;
@@ -116,10 +125,7 @@ export function nextSteps(session: Session): string[] {
       out.push(`${m.name}: Qloo gave no qualified associations. What recent releases like your comps did local distributors acquire there?`);
       continue;
     }
-    const n = r.nearby;
-    if (n.localOrigin.length) out.push(`${m.name}: who distributed ${listNames(n.localOrigin.slice(0, 2))} there, and would they look at your film?`);
-    else if (n.originUnknown.length) out.push(`${m.name}: which of ${listNames(n.originUnknown.slice(0, Math.min(3, SHOWN_PER_GROUP)))} are ${m.name} productions? Qloo did not record their origin in these results.`);
-    else out.push(`${m.name}: no distinctive local-origin titles under the controls. Ask local acquisitions staff which comparable arthouse releases travelled there.`);
+    if (r.claimCheck) out.push(`${m.name}: ${r.claimCheck.action}`);
   }
   if (!session.plan.markets.length) out.push("Loosen a constraint or add candidate markets, then re-run.");
   out.push("Check rights availability and festival timing with a sales agent active in each territory.");

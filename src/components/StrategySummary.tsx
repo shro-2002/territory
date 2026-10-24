@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useId, useState, type ReactNode } from "react";
 
 import type { Session } from "@/lib/agent/agent";
-import { evidenceLine, nextSteps, strategyItems, uncertainties, type StrategyItem } from "@/lib/territory/view-model";
+import { CLAIM_BADGE, nextSteps, type StrategyItem, strategyItems, uncertainties, evidenceLine } from "@/lib/territory/view-model";
 import { SectionHead } from "./ui/SectionHead";
 
 export interface CallStats {
@@ -89,16 +89,16 @@ function Panel({ title, tone, defaultOpen = false, children }: { title: string; 
 function QlooPanel({ session, stats }: { session: Session; stats: CallStats | null }) {
   const read = Object.keys(session.research).length;
   const qlooClaims = session.claims.filter((cl) => cl.provenance === "qloo").length;
-  const localTitles = Object.values(session.research).reduce((n, r) => n + r.nearby.counts.localOrigin, 0);
+  const candidates = Object.values(session.research).reduce((n, r) => n + (r.claimCheck?.candidateCount ?? 0), 0);
   const rows: Array<[string, string]> = [
     ["Markets read through Qloo", String(read)],
     ["Qloo-backed claims", String(qlooClaims)],
-    ["Distinctive local-origin titles (vs genre controls)", String(localTitles)],
+    ["Candidates to verify (survived every control)", String(candidates)],
     ...(stats ? [["Qloo requests", `${stats.live + stats.cached} (${stats.live} live)`] as [string, string]] : []),
   ];
   return (
     <Panel title="What Qloo contributes" tone="var(--evidence)">
-      <p>Qloo surfaces the titles associated with your comps in each country. Territory checks them against four unrelated genres there, separating the country&apos;s general catalogue from distinctive associations to investigate. The budget planner never sees this evidence.</p>
+      <p>Qloo surfaces the titles associated with your comps in each country. Territory tests them against unrelated genres and films there and against the other markets, separating the country&apos;s general catalogue from the few candidates worth verifying. The budget planner never sees this evidence.</p>
       <dl className="mt-4 divide-y divide-line">
         {rows.map(([k, v]) => (
           <div key={k} className="flex justify-between gap-4 py-2"><dt className="text-bone-dim">{k}</dt><dd className="tabular-nums text-bone">{v}</dd></div>
@@ -124,7 +124,7 @@ function MarketCard({ item, rank, onInspect }: { item: StrategyItem; rank: numbe
       <p className="eyebrow">{item.priority ? `Your #${item.priority} candidate` : `Suggested reserve · ${ordinal(rank)} in plan`}</p>
       <h3 className="display mt-2 text-4xl leading-none">{item.name}</h3>
       <p className="mt-4 inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: `color-mix(in oklab, ${tone} 50%, transparent)`, color: tone }}>
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone }} />{item.evidence.gap ? "Research gap" : `${item.evidence.distinctive} distinctive associations`}
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone }} />{item.evidence.gap ? "Research gap" : item.evidence.claim ? CLAIM_BADGE[item.evidence.claim](item.evidence.candidates) : "Not claim-checked"}
       </p>
       <p className="mt-3 text-sm text-bone md:hidden">{item.formatLabel}</p>
       <div id={bodyId} className={`${open ? "block" : "hidden"} md:block`}>
@@ -132,11 +132,11 @@ function MarketCard({ item, rank, onInspect }: { item: StrategyItem; rank: numbe
         <dl className="mt-5 space-y-3 border-t border-line pt-4 text-sm">
           <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Language work</dt><dd className="text-right">{item.formatLabel}</dd></div>
           <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">General catalogue</dt><dd className="text-right tabular-nums text-bone-dim">{item.evidence.gap ? "—" : `${item.evidence.catalogue} of ${item.evidence.titlesFound}`}</dd></div>
-          <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Verified local origin</dt><dd className="text-right tabular-nums text-bone-dim">{item.evidence.gap ? "—" : item.evidence.localOrigin}{item.evidence.originUnknown ? <span className="text-bone-faint"> · {item.evidence.originUnknown} unrecorded</span> : null}</dd></div>
+          <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Candidates to verify</dt><dd className="text-right tabular-nums text-bone-dim">{item.evidence.gap ? "—" : item.evidence.candidates}</dd></div>
         </dl>
         <p className="mt-4 text-xs leading-relaxed text-bone-faint">{evidenceLine(item.evidence)}</p>
-        {item.localOrigin.length > 0 && (
-          <p className="mt-2 text-xs leading-relaxed text-bone-faint">Distinctive local-origin titles (vs genre controls): <span className="text-bone-dim">{item.localOrigin.join(", ")}</span></p>
+        {item.candidates.length > 0 && (
+          <p className="mt-2 text-xs leading-relaxed text-bone-faint">Candidates to verify (not proven local matches): <span className="text-bone-dim">{item.candidates.join(", ")}</span></p>
         )}
         <button type="button" onClick={() => onInspect(item.code)} className="btn mt-5 w-full">Inspect on the atlas</button>
       </div>

@@ -37,6 +37,50 @@ describe("QlooClient", () => {
     expect(client.calls.filter((c) => c.status === 429)).toHaveLength(2);
   });
 
+  it("meters every retry as a network call against the budget", async () => {
+    const client = mockClient({ fetchImpl: createMockFetch({ rateLimitFirst: 2 }) });
+    await client.search("Minari");
+    expect(client.liveCallCount).toBe(3);
+  });
+
+  it("never sends a retry past the reserved budget, and fails closed", async () => {
+    let sent = 0;
+    const inner = createMockFetch({ rateLimitFirst: 10 });
+    const counting: typeof fetch = (u, i) => (sent++, inner(u, i));
+    const client = mockClient({ fetchImpl: counting, callBudget: 2, maxRetries: 3 });
+    await expect(client.search("Minari")).rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
+    expect(sent).toBe(2);
+    expect(client.liveCallCount).toBe(2);
+  });
+
+  it("counts a timed-out attempt, which the server may still have received", async () => {
+    const hanging: typeof fetch = (_url, init) => new Promise((_, reject) => init?.signal?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }))));
+    const client = new QlooClient({ apiKey: "k", fetchImpl: hanging, timeoutMs: 20, maxRetries: 1, sleep: noSleep });
+    await expect(client.search("x")).rejects.toMatchObject({ code: "TIMEOUT" });
+    expect(client.liveCallCount).toBe(2);
+  });
+
+  it("concurrent calls with failures never send more requests than the budget", async () => {
+    let sent = 0;
+    const flaky: typeof fetch = async () => (sent++, new Response("down", { status: 503 }));
+    const client = new QlooClient({ apiKey: "k", fetchImpl: flaky, callBudget: 7, maxRetries: 3, concurrency: 4, sleep: noSleep });
+    const results = await Promise.allSettled(Array.from({ length: 10 }, (_, i) => client.search(`t${i}`)));
+    expect(results.every((r) => r.status === "rejected")).toBe(true);
+    expect(sent).toBe(7);
+    expect(client.meteredCallCount).toBe(7);
+  });
+
+  it("attributes each concurrent response to its own call record", async () => {
+    const inner = createMockFetch();
+    // Later requests answer first, so "the last recorded call" is usually someone else's.
+    let n = 0;
+    const reordered: typeof fetch = async (u, i) => { const delay = 30 - 3 * n++; await new Promise((r) => setTimeout(r, Math.max(delay, 0))); return inner(u, i); };
+    const client = mockClient({ fetchImpl: reordered, concurrency: 10 });
+    const markets = ["France", "Germany", "Japan", "Mexico", "Brazil", "Spain"];
+    const traced = await Promise.all(markets.map((m) => client.insightsTraced({ "filter.type": "urn:entity:movie", "signal.location.query": m, "signal.interests.entities": "x" })));
+    traced.forEach(({ callId }, i) => expect(client.calls.find((c) => c.id === callId)?.params["signal.location.query"]).toBe(markets[i]));
+  });
+
   it("gives up with RATE_LIMITED after max retries", async () => {
     const client = mockClient({ fetchImpl: createMockFetch({ rateLimitFirst: 10 }), maxRetries: 2 });
     await expect(client.search("Minari")).rejects.toMatchObject({ code: "RATE_LIMITED", status: 429 });
