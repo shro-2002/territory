@@ -1,8 +1,9 @@
 # Territory — Product Spec
 
-**One line:** an AI distribution war room that tells an independent filmmaker which international markets
-their unreleased film's taste-neighbours over-index in, how to localize under a fixed budget, and how the
-plan changes when constraints change — with every claim labelled by source.
+**One line:** cultural research and localization planning for an independent filmmaker: what Qloo associates with the
+film's comps in each candidate country, which of those associations survive a claim check as candidates to verify, how to
+localize the filmmaker's own priority markets under a fixed budget, and how that plan changes when constraints change, with
+every claim labelled by source. It does not rank countries, predict success or recommend the best markets.
 
 ## User and decision
 Indie filmmaker or small distributor before festival/market sales (AFM, EFM, Marché). Decision: which
@@ -25,6 +26,7 @@ per-language subtitle/dub cost assumptions, constraints (budget, max markets, ex
 No audience-size, box-office or revenue numbers. No Qloo-derived ranking or selection of countries (taste-portability score retired 2026-10-24). No raw cross-query affinity comparison. No raw Qloo data in the repo.
 No copyrighted artwork. Mock data always labelled.
 
-## Works today (live-verified 2026-10-23)
-Typed client, agent state machine, planner + independent validator, replan with reuse, claim ledger, experiment harness.
-**Not yet:** UI, LLM narration, LLM-only baseline, deployment.
+## Works today (2026-10-25)
+Typed Qloo client with metered quota, deterministic agent state machine (no LLM), claim checker, planner + independent
+validator, War Room replan with evidence reuse, provenance ledger, web UI, Markdown export, Netlify deployment.
+**Not done:** validation with filmmakers or sales agents; real localization quotes; outcome validation of any kind.

@@ -151,3 +151,20 @@ censoring (absence ≠ zero), regional catalogue differences, and that Qloo data
 - **War Room on real cached data:** Germany withdrawal promotes Mexico, the next candidate on the list, with no new Qloo calls; a
   40% budget cut turns France's dub into subtitles. Zero constraint violations.
 
+## Claim-checker sensitivity (cached data, 0 new calls, 2026-10-25)
+Showcase brief, same 9 markets, private cache only (call budget 0). Candidates surviving every control:
+
+| Variant | Germany | Japan | Mexico | South Korea | France |
+|---|---|---|---|---|---|
+| Shipped (top-100, crime-thriller + Spanish coming-of-age controls, 8 other markets) | 1 | 4 | 2 | 1 | 0 |
+| Top-50 instead of top-100 | 0 | 0 | 2 | 2 | 0 |
+| Crime-thriller film control only | 2 | 11 | 3 | 4 | 1 |
+| Cross-market check without South Korea | 1 | 9 | 2 | 1 | 0 |
+| Cross-market check against US, GB, FR only | 2 | 10 | 4 | 5 | 3 |
+
+- The Spanish coming-of-age control shares 48–71% of the arthouse brief's own neighbourhood in Japan, Germany and Mexico, so
+  it is not independent of this brief; it removes Japanese family dramas such as *The Asadas* and *A Hundred Flowers*.
+- The cross-market check makes one market's result depend on which other markets the filmmaker listed.
+- None of the 584 cached responses carries Qloo's `release_country`, so no showcase candidate has a verified origin.
+- Consequence: candidates are leads for human review only; counts are not stable findings and are not presented as better
+  than a genre-only filter.

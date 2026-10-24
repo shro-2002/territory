@@ -1,6 +1,6 @@
 # Judge Demo (~90 s)
 
-Everything below was exercised in a browser against the live Qloo hackathon API on 2026-10-23.
+Exercised on a cached real-data build on 2026-10-25; the showcase answers from cached live Qloo responses.
 
 1. **0–10 s · Landing.** Headline states the question; a preloaded unreleased film (*The Year of Small Rooms*, 4 comps,
    9 candidate markets, $80k budget) and a dimmed world atlas. Badge shows **Live Qloo API** or **Mock data**.
@@ -21,4 +21,4 @@ Everything below was exercised in a browser against the live Qloo hackathon API 
 
 Failure states: invalid brief → inline error; unresolvable comps → failed session with reason; Qloo outage →
 "research unavailable" with no fabricated plan; rate limit → 429 with retry time; quota guard → 503 message.
-Not yet: a persistent cached showcase for fresh serverless instances (the cache is per instance).
+The showcase is served from a shared Redis cache and a deployed seed, so fresh instances answer it without new Qloo calls. A custom brief costs ~170 live calls against a 5,000/day shared quota.

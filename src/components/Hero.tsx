@@ -46,13 +46,13 @@ export function Hero({ input, source, isBusy, hasResult, progress, pendingCodes,
         <div className="max-w-[640px]">
           <motion.p className="eyebrow flex items-center gap-3 text-gold" {...enter(0)}>
             <span aria-hidden className="h-px w-10 bg-gold/70" />
-            Market strategy for independent film, built on Qloo taste data
+            Cultural research and localization planning for independent film
           </motion.p>
           <motion.h1 className="display mt-6 text-[clamp(2.9rem,min(7.6vw,10svh),6rem)] leading-[0.98]" {...enter(1)}>
             Research the <em className="text-accent">world</em> before your film travels.
           </motion.h1>
           <motion.p className="mt-6 max-w-[34rem] text-base leading-relaxed text-bone-dim sm:text-lg" {...enter(2)}>
-            Territory reads Qloo&apos;s taste graph in each country you are considering, separates generic catalogue from the few associations worth verifying, and fits your localization budget to your priorities — then re-plans the moment a distributor drops out or the budget shrinks.
+            Territory reads Qloo&apos;s taste graph in each country you are considering, separates generic catalogue from the few titles that survive its controls as candidates to verify, and fits your localization budget to your priorities — then re-plans the moment a distributor drops out or the budget shrinks.
           </motion.p>
 
           <motion.div className="mt-[clamp(1.5rem,4svh,2.25rem)] flex flex-wrap items-center gap-3" {...enter(3)}>

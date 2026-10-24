@@ -16,12 +16,12 @@ Replan: `IMPACT_ANALYSIS → SELECTIVE_RESEARCH → STRATEGY_REVISION → VERIFI
 Each transition emits a `TraceEvent` with the Qloo call ids made during that state.
 
 ## Division of labour
-- Deterministic code: validation, scoring, budget arithmetic, constraint checks, diffing, claim provenance.
-- LLM (planned, optional, free tier): explain the plan in prose **using only ledger claims**; suggest comps. It never produces numbers.
-- Research policy today is deterministic (fallback and reserve rules); this is stated, not dressed up as LLM autonomy.
+- Deterministic code: validation, claim check, budget arithmetic, constraint checks, diffing, claim provenance.
+- No LLM in the deployed product. All report text comes from the provenance-tagged claim ledger.
+- Research policy is deterministic (fallback and reserve rules); this is stated, not dressed up as LLM autonomy.
 
 ## Bounds
-Client call budget (default 120, agent/showcase 160; a cold 9-market run uses ~100 calls, ~40 s; reference baselines are cached after the first run), retries 3, timeout 12 s, concurrency 4, ≤4 fallback markets, ≤3 reserve markets per replan, planner ≤14 candidates.
+Per-request Qloo reservation 220 (every HTTP attempt, retries included, is metered; a cold 9-market run uses ~170 calls, ~40 s; the showcase is answered from cache), retries 3, timeout 12 s, concurrency 4, research deadline 50 s, ≤4 fallback markets, ≤3 reserve markets per replan, planner ≤14 candidates.
 
 ## Security
 Key only in server env; never in URL, logs, CallRecord or client bundle. `.private/` and `.env*` gitignored.
@@ -38,6 +38,6 @@ src/lib/server/               seal.ts (HMAC over the session) · rate-limit.ts (
 src/lib/client/               stream.ts (NDJSON reader) · brief.ts (Markdown export)
 ```
 Stateless by design: the session travels with the browser, sealed so the server only replans evidence it produced.
-Cache: `.private/qloo-cache` locally, `os.tmpdir()` on Vercel (per instance, not shared).
-Limits (best effort, per instance): 12 runs / 10 min / IP, 3,000 Qloo calls / day, 160 calls / run.
+Cache: `.private/qloo-cache` locally; hosted: Upstash Redis (shared) → `os.tmpdir()` → read-only deployed seed.
+Limits: 12 runs / 10 min / IP; 5,000 Qloo calls / day shared across instances (Redis counter), 3,000 / instance / day fallback; 220 calls reserved per run.
 Dependencies: production `npm audit` clean; 5 high advisories are in the dev-only lint chain (eslint-config-next → braces).

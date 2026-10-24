@@ -241,7 +241,7 @@ function Validation({ summary }: { summary: ExperimentSummary }) {
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-xs text-bone-faint">Single run per prompt, temperature 0. Not a box-office or accuracy benchmark: it measures grounding, constraint correctness and scenario sensitivity. Full method in docs/EVALUATION.md.</p>
+          <p className="mt-2 text-xs text-bone-faint">Single run per prompt, temperature 0. Not a box-office or accuracy benchmark: it measures grounding, constraint correctness and scenario sensitivity. The LLM-only baseline is a small local model without web search, not a frontier model or desk research. Full method in docs/EVALUATION.md.</p>
         </div>
       ) : <p className="text-bone-faint">E6 results not yet available in this build.</p>}
       {summary.yearWindow && (

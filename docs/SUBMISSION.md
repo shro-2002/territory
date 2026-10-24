@@ -1,95 +1,63 @@
-# Devpost submission draft
+# Devpost submission
 
 **Name:** Territory
-**Tagline:** Qloo-grounded cultural research and localization planning for independent film — and a war room for when the plan breaks.
-
-## Inspiration
-Independent films commit sales and localization budgets on intuition and big-market box office. Mid-size titles have no data,
-and plans change constantly: a buyer passes, a financier trims the localization line, a territory gets pre-sold.
+**Tagline:** Cultural research and localization planning for independent film, with every claim traced to its source.
+**Demo:** https://territory-qloo.netlify.app (no login) · **Code:** https://github.com/shro-2002/territory (MIT)
 
 ## What it does
-See README "What it does". For each country the filmmaker is considering, Territory shows what Qloo associates with the film's
-comparable titles there, then runs a claim check: titles Qloo also returns there for four unrelated genres are the country's
-general catalogue (56–93% in live data); the rest must also survive two unrelated-film controls and be absent from the other
-researched markets' lists. Survivors are candidates to verify, never established local matches; origin comes only from Qloo's
-record and release format is always unverified. Each market gets one decision and a next research action, with the Qloo
-request ids behind it. Separately, a deterministic planner fits the
-filmmaker's own market priorities to the localization budget. When a market falls through or the budget is cut, it re-plans,
-re-verifies and explains each change as driven by priority, cost or constraint.
+An independent filmmaker enters an unreleased film, 3–6 comparable titles, the countries they are considering (in priority
+order) and a localization budget. Territory:
+
+1. **Researches each country in Qloo.** It resolves the comps and asks Qloo which films are associated with them in each
+   country (`signal.location.query`).
+2. **Checks its own claims.** Most of those associations are the country's general catalogue: 56–81% of each list in the
+   showcase also comes back for four unrelated genres there. The rest must also survive two unrelated-film controls and
+   be absent from the other researched countries' lists. Each country gets one decision: *candidates to verify*, *no local
+   comparable established*, or *insufficient evidence*, with the Qloo request ids behind it. Survivors are leads for a human
+   to check, never established matches: Qloo's production origin is shown only when recorded, and release format is always
+   unverified (one German survivor is a concert screening, and Territory says so).
+3. **Plans localization from the filmmaker's own priorities.** A deterministic planner fits the filmmaker's priority list to
+   the budget and market cap, choosing subtitles or dubbing per language, and an independent validator re-checks every plan.
+   Qloo evidence does not enter the planner.
+4. **Re-plans when something breaks (War Room).** Remove a country, cut the budget or require subtitles. Territory works out
+   which decisions are invalidated, reuses the evidence that still holds, researches only when the candidate list runs out,
+   and tags every change as driven by priority, cost or constraint.
+5. **Exports a research brief** (Markdown) with the claim ledger, open questions and Qloo request ids.
+
+## What Territory does not do
+It does not predict box office, demand or market success, does not rank countries or say which markets are best, and has not
+been shown to give better commercial outcomes than an experienced sales agent or ordinary desk research. Without Qloo, the
+plan, budget and War Room are identical; Qloo contributes the research layer only. Localization costs are illustrative
+inputs. No filmmaker or sales agent has tested it yet.
 
 ## How we built it
-Next.js 16 / TypeScript; server-side typed Qloo client (GET only, timeouts, 429 back-off, concurrency 4, call budgets, private
-slimmed cache, Redis quota isolation); bounded deterministic agent state machine (validation → resolution → planning →
-investigation → verification → plan → constraint check → report; and impact analysis → selective research → revision →
-re-verification); a claim checker (same-country genre controls, fixed-rule unrelated-film controls, cross-market check); exhaustive constrained optimizer with an independent
-validator; HMAC-sealed stateless sessions; NDJSON streaming; d3-geo atlas; three.js globe. 112 unit/integration tests,
-Playwright journey test, CI.
+Next.js 16 / TypeScript on Netlify. Server-side Qloo client: GET only, timeouts, 429 back-off, concurrency 4, every HTTP
+attempt metered against a per-request reservation and a shared daily quota in Upstash Redis, private slimmed cache.
+Deterministic agent state machine (no LLM): validation → resolution → research → evidence verification with thin-evidence
+fallback → plan → constraint check → report; and impact analysis → selective research → revision → re-verification.
+Request-level provenance on every claim. HMAC-sealed public session; AES-256-GCM-encrypted research context. 115
+unit/integration tests, a Playwright journey test and CI.
 
 ## Qloo usage
-`/search` (comp and reference resolution), `/v2/insights` with `filter.type=urn:entity:movie`, `signal.interests.entities`,
-`signal.location.query`, `filter.release_year.min`, `take`, `page`; `release_country` for origin. Findings we reported honestly:
-location-conditioned movie data is 2018+ only; `filter.results.entities` with a location filters rather than scores; most
-location-conditioned results are the country's general catalogue whatever the seed.
+`/search` to resolve comps and controls; `/v2/insights` with `filter.type=urn:entity:movie`, `signal.interests.entities`,
+`signal.location.query`, `filter.release_year.min`, `take` and `page`. About 170 requests for a fresh 9-country brief; the
+showcase is answered from cached live responses.
 
-## Challenges
-Affinity is normalized per query, so raw scores are not comparable across countries. Our first anchor-panel design failed live.
-Our second, a "taste portability" ranking, failed our own audit: 42–80% of what it measured was the country's catalogue, and a
-Spanish-language film scored below a typical genre in Spain and Mexico. We retired it and stopped ranking countries by Qloo.
+## What we learned
+- Affinity is normalised per query, so raw scores cannot be compared across countries; our first design failed live.
+- Location-conditioned movie results on the hackathon key contained only 2018+ releases (TV was not limited).
+- Most location-conditioned results are the country's general catalogue whatever the seed. Our second design, a
+  "taste portability" ranking of countries, mostly measured that catalogue (42–80% of its overlap), and a Spanish-language
+  film scored below a typical genre in Spain and Mexico. We retired it and stopped ranking countries with Qloo.
+- The claim checker's counts are sensitive to its settings: top-50 instead of top-100, a different control set or a
+  different list of researched countries moved Japan from 4 candidates to anywhere between 0 and 11. So we present
+  survivors as leads, not findings.
 
 ## Accomplishments
-An honest audit that killed our own headline metric; a planner provably independent of unvalidated cultural scores (a test
-scrambles every Qloo field and requires the same plan); a claim checker that rejects most of what a genre-only filter called
-distinctive (Japan 31 → 4 candidates, Germany 33 → 1 format-unverified listing) with request-level provenance; a War Room that
-conditions its tool use on what changed.
+A working, deployed tool whose every Qloo-backed sentence cites the requests behind it; a planner provably independent of
+unvalidated cultural scores (a test scrambles every Qloo-derived field and requires the same plan); honest refusals when
+evidence is missing; and a War Room that only spends Qloo quota when a revision actually needs new research.
 
-## What we learned / limits
-Four genre and two unrelated-film controls, one day of data, no outcome validation. A candidate only survived those controls;
-that is not proof it is specific to the film, and "no local comparable established" is not proof none exists. Origin is
-unknown for results cached before Territory kept Qloo's release-country field, and Qloo records no release format (a concert
-premiere appears as a movie), so every candidate needs human review.
-
-## What's next
-More and better-matched controls; TV and music associations (each needs its own controls); usability sessions with sales agents;
-real localization quotes; festival and buyer data.
-
----
-
-# Finalist pitch (≈90 s)
-
-**Problem & buyer.** Independent producers and boutique sales agents decide which territories to pitch and which languages to dub
-with no data for mid-size titles — and the plan breaks every week. Buyer: indie sales agents, small distributors, producers
-preparing AFM/EFM/Marché.
-
-**Why a generic LLM can't do it.** An LLM can repeat regional stereotypes; it cannot tell you which titles are associated with
-*these comps* in Germany, or which of those are just Germany's catalogue. In our test it named local comparables for films that do
-not exist and got cost totals wrong 9 times in 12.
-
-**What the agent does.** Resolves comps; researches each candidate country in Qloo and qualifies every association against
-a claim check (genre, unrelated-film and cross-market controls); detects thin evidence; plans localization under budget from the filmmaker's priorities; and when reality hits,
-works out what is invalidated, reuses what is still valid, researches only when the candidate list runs out, and explains every
-change.
-
-**Qloo's measurable contribution.** The cultural research layer: associations per country, the share that is general catalogue,
-candidates that survive every control (to verify, not proven), recorded origin, every decision traceable to Qloo requests, and refusal when evidence is
-absent. Qloo does **not** choose markets — we tested that it can't.
-
-**Limits.** Associations are not demand; six controls; origin often unrecorded and format never recorded; 2018+ location data for films; no outcome validation yet.
-
-**Path to product.** Validate with sales agents; add better controls and TV/festival/buyer data; sell per-title research reports
-to producers and seats to sales agents.
-
----
-
-# 90-second demo video plan (screen recording; captions on screen)
-
-| Time | Screen | Caption |
-|---|---|---|
-| 0–8 s | Landing; film card; globe | "An unreleased indie film. Nine countries on the filmmaker's list. What does Qloo say about each?" |
-| 8–18 s | Click **Reveal the strategy**; trace streams | "Territory reads each country in Qloo's taste graph, then checks its own claims" |
-| 18–36 s | Atlas → **Japan**: funnel 100 → 31 → 14 → 4; *The Asadas* under "failed the stronger check"; 4 candidates, origin not recorded | "A genre-only filter said 31 leads. Unrelated films and other markets cut it to 4 — candidates to verify, not local matches" |
-| 36–44 s | Atlas → **Germany**: one survivor, a concert premiere, format-unverified | "Qloo can't tell a film from an event screening. Territory says so and asks a human" |
-| 44–52 s | Plan cards, budget meter, ✓ independent check | "The budget follows your priorities, not a cultural score" |
-| 52–66 s | **Germany's distributor pulls out** → next candidate promoted, no new Qloo calls | "Next candidate on your list. No research needed, and it says why" |
-| 66–76 s | **Budget cut 40%** → dub becomes subtitles | "Every change tagged: priority, cost or constraint" |
-| 76–90 s | Export brief: Japan decision + Qloo request ids | "Every claim decision traced to the Qloo requests behind it" |
-Record on the deployed URL; keep the evidence-source line visible (honesty).
+## Limits and next steps
+Six controls, one candidate brief tested in depth, no outcome or user validation. Next would be sessions with sales agents,
+real localization quotes, and controls that are independent of the brief.

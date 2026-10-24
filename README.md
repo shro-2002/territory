@@ -2,7 +2,7 @@
 
 Territory helps an independent filmmaker or small distributor **research the countries they are considering for an unreleased
 film and plan localization under a fixed budget**. Qloo shows what is culturally associated with the film's comparable titles
-in each country, and Territory's claim checker separates the country's general catalogue from the few titles worth verifying. A
+in each country, and Territory's claim checker separates the country's general catalogue from the few titles that survive its controls, as candidates for a human to verify. A
 deterministic planner fits the filmmaker's own market priorities to the budget, and re-plans when a market falls through or
 the budget is cut.
 
@@ -42,9 +42,15 @@ Location-conditioned Qloo movie data covers 2018+ releases.
 Market selection does **not**: `tests/retired-score.test.ts` scrambles every Qloo-derived field and requires an identical plan.
 The cultural research does: which titles are associated with your comps in each country, which of them are catalogue, which
 survive the genre, unrelated-film and cross-market controls, and which have a recorded origin. In the cached showcase the
-checker cuts Japan's 31 genre-only "distinctive" titles to 4 candidates and Germany's 33 to 1 format-unverified listing.
-None of that exists without Qloo, and an LLM-only baseline
-named local comparables for films that do not exist (details: [docs/EVALUATION.md](docs/EVALUATION.md)).
+checker cuts Japan's 31 genre-only "distinctive" titles to 4 candidates and Germany's 33 to 1 listing (a concert screening,
+flagged format-unverified). These counts depend on the settings: in a cached sensitivity check, top-50 instead of top-100,
+a different control set, or a different list of researched markets changed Japan's count from 4 to anywhere between 0 and 11
+([docs/EVALUATION.md](docs/EVALUATION.md#claim-checker-sensitivity-cached-data-0-new-calls-2026-10-25)). Treat candidates as leads, not findings.
+
+**Without Qloo,** the plan, budget, War Room and change reasons are identical; only the research layer disappears. Territory
+does not predict market success, identify the best markets, or claim better commercial outcomes, and it has not been
+validated with filmmakers or sales agents. In a small earlier test, a local 14B model with no tools invented local
+comparables for fictional comps, where Territory declined; that is not a comparison with a frontier model or desk research.
 
 ## Run locally
 Requires Node 24+ (tested on 26.12.1).
@@ -53,7 +59,7 @@ npm install
 cp .env.example .env.local      # add QLOO_API_KEY (server-side only); leave empty for labelled mock data
 npm run dev                     # http://localhost:3000
 ```
-Checks: `npm test` (94 unit/integration) · `npx tsx e2e/local-comps-check.mts` (cached real data, needs the private cache) · `npm run e2e` (Playwright, mock backend) · `npm run typecheck` · `npm run lint` · `npm run build`.
+Checks: `npm test` (115 unit/integration) · `npx tsx e2e/local-comps-check.mts` (cached real data, needs the private cache) · `npm run e2e` (Playwright, mock backend) · `npm run typecheck` · `npm run lint` · `npm run build`.
 Local runs ignore any Upstash credentials unless `TERRITORY_REDIS_NAMESPACE` names an isolated keyspace, so tests and dev servers can never spend a deployment's shared quota (see `docs/DEPLOY.md`).
 Experiments (need a key): `npm run experiments` (E1–E5, retired metric) · `npm run year-window` · `npm run audit-catalogue` (cache only) ·
 `npm run e6` (also needs local Ollama with `qwen3:14b`).

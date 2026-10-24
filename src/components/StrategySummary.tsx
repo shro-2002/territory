@@ -98,7 +98,7 @@ function QlooPanel({ session, stats }: { session: Session; stats: CallStats | nu
   ];
   return (
     <Panel title="What Qloo contributes" tone="var(--evidence)">
-      <p>Qloo surfaces the titles associated with your comps in each country. Territory tests them against unrelated genres and films there and against the other markets, separating the country&apos;s general catalogue from the few candidates worth verifying. The budget planner never sees this evidence.</p>
+      <p>Qloo surfaces the titles associated with your comps in each country. Territory tests them against unrelated genres and films there and against the other markets, separating the country&apos;s general catalogue from the few candidates to verify. The budget planner never sees this evidence.</p>
       <dl className="mt-4 divide-y divide-line">
         {rows.map(([k, v]) => (
           <div key={k} className="flex justify-between gap-4 py-2"><dt className="text-bone-dim">{k}</dt><dd className="tabular-nums text-bone">{v}</dd></div>

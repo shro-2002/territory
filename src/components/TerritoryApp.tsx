@@ -136,7 +136,7 @@ export function TerritoryApp({ initialInput, summary }: Props) {
         {session && !canReplan && (
           <div role="alert" className="mx-auto mt-10 max-w-[1320px] px-4 sm:px-8">
             <div className="panel p-6">
-              <p className="text-removed-ink">Research failed for this brief, so Territory made no recommendation.</p>
+              <p className="text-removed-ink">Research failed for this brief, so Territory produced no plan.</p>
               {session.trace.at(-1) && <p className="mt-2 text-sm text-bone-dim">{session.trace.at(-1)!.message}</p>}
               <button type="button" className="btn mt-4" onClick={() => setIsEditing(true)}>Edit film brief</button>
             </div>
