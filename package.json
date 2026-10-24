@@ -14,9 +14,7 @@
     "e6": "tsx --env-file-if-exists=.env.local scripts/eval/e6.ts",
     "year-window": "tsx --env-file-if-exists=.env.local scripts/eval/year-window.ts",
     "e2e": "playwright test",
-    "audit-scoring": "tsx --env-file-if-exists=.env.local scripts/eval/scoring-audit.ts",
-    "audit-catalogue": "tsx scripts/eval/catalogue-audit.mts",
-    "ablation": "tsx --env-file-if-exists=.env.local scripts/eval/ablation.ts"
+    "audit-catalogue": "tsx scripts/eval/catalogue-audit.mts"
   },
   "dependencies": {
     "d3-geo": "3.1.1",

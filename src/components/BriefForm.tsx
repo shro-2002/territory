@@ -62,11 +62,11 @@ export function BriefForm({ initial, onSubmit, onCancel }: Props) {
         {draft.comps.length < 6 && <button type="button" className="btn" onClick={() => set("comps", [...draft.comps, { name: "" }])}>+ Add comp</button>}
       </fieldset>
       <fieldset>
-        <legend className="mb-2 text-xs text-bone-dim">Candidate markets</legend>
+        <legend className="mb-2 text-xs text-bone-dim">Candidate markets, in your priority order — select them in the order you would pursue them</legend>
         <div className="flex flex-wrap gap-1.5">
           {MARKETS.map((m) => (
-            <button key={m.code} type="button" aria-pressed={draft.targetMarkets.includes(m.code)} onClick={() => toggleMarket(m.code)} className={`rounded-full border px-2.5 py-1 text-xs ${draft.targetMarkets.includes(m.code) ? "border-accent bg-accent/15 text-bone" : "border-line-2 text-bone-dim"}`}>
-              {m.name}
+            <button key={m.code} type="button" aria-pressed={draft.targetMarkets.includes(m.code)} aria-label={draft.targetMarkets.includes(m.code) ? `${m.name}, priority ${draft.targetMarkets.indexOf(m.code) + 1}` : m.name} onClick={() => toggleMarket(m.code)} className={`rounded-full border px-2.5 py-1 text-xs ${draft.targetMarkets.includes(m.code) ? "border-accent bg-accent/15 text-bone" : "border-line-2 text-bone-dim"}`}>
+              {draft.targetMarkets.includes(m.code) && <span aria-hidden className="mr-1 tabular-nums text-accent">{draft.targetMarkets.indexOf(m.code) + 1}</span>}{m.name}
             </button>
           ))}
         </div>

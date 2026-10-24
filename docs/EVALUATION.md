@@ -1,5 +1,9 @@
 # Evaluation
 
+> **Status, 2026-10-24.** Territory no longer ranks or selects countries with Qloo. The taste-portability score was retired after
+> the catalogue audit below. Sections marked *(historical — retired metric)* record how that score was tested; they do not
+> describe the current product. Current verification: "Current product (2026-10-24)" at the end of this file.
+
 ## Automated tests — `npm test` 44 passing, `npm run e2e` 1 passing (2026-10-23)
 Client: key in header not URL, GET only, retry/backoff on 429, give-up, timeout, no retry on 4xx, cache hit, call budget, concurrency cap, empty result.
 Signal: top-K overlap, membership-only (scale-free), lift vs baseline, zero baselines ignored, thin/empty/no-baseline paths.
@@ -18,7 +22,7 @@ Agent (mock, e2e): disambiguation by year/format, unresolved comp, reproducibili
 | Qloo contribution | E6: plan overlap (Jaccard of markets) Qloo vs LLM-only; LLM-only unsupported-claim count |
 | Reliability | live status distribution, p50/p95 latency across N scripted runs |
 
-## E6 — Territory vs LLM-only (run 2026-10-23, 14:12–14:46 IST, within a 2 h time box)
+## E6 — Territory vs LLM-only *(historical — retired metric for market choice; grounding results still apply)* (run 2026-10-23, 14:12–14:46 IST, within a 2 h time box)
 
 **Setup.** `npm run e6` (`scripts/eval/e6.ts`). Four briefs (`src/lib/territory/scenarios.ts`): Korean-American arthouse
 drama, neo-western crime thriller, Spanish-language coming-of-age, and a cold start whose three comps are fictional.
@@ -56,7 +60,7 @@ Aggregates: `docs/experiments/e6-live.json`. Full outputs: `.private/` only.
 - Limits: one small local model, one run per prompt, no human raters, 3+1 scenarios. A frontier model may do arithmetic
   better; the cold-start behaviour is the more structural finding.
 
-## Qloo ablation — the primary necessity test (`npm run ablation`, 2026-10-23)
+## Qloo ablation *(historical — retired metric; script removed)* (2026-10-23)
 
 Same four briefs, same deterministic planner, cost table, constraints and validator. **Only** Qloo cultural evidence differs:
 the disabled condition gives every market the same uninformative score, so only cost and constraints remain.
@@ -77,7 +81,7 @@ Constraint validity and arithmetic are identical by construction (both 9/9 valid
 - Reliability: the Qloo condition degraded honestly once (ambiguous comp) and declined once (no resolvable comps).
 - Not shown: that the Qloo-driven choices lead to better releases. No outcome data.
 
-## Scoring audit (`npm run audit-scoring`, cached data, 0 new calls)
+## Scoring audit *(historical — retired metric; script removed)* (cached data, 0 new calls)
 
 | Check | Result | Product consequence |
 |---|---|---|
@@ -131,3 +135,19 @@ sample effect. Aggregates: `docs/experiments/year-window-live.json`.
 ## Netflix Top 10 (external, exploratory only)
 Retrospective association, never a forecast: restrict to Netflix originals released simultaneously worldwide; note Top-10
 censoring (absence ≠ zero), regional catalogue differences, and that Qloo data may postdate the release (leakage).
+
+## Current product (2026-10-24)
+- **Selection is independent of Qloo.** The planner takes the filmmaker's candidates in their priority order and optimises only
+  stated costs, budget and constraints. `tests/retired-score.test.ts` (mutation-checked: the test fails when an evidence gap or a
+  local-origin count is allowed to change a market's priority) scrambles every Qloo-derived field, then re-plans and replays War
+  Room revisions, requiring identical plans. It also checks that sessions carry no score fields and that only evaluation scripts
+  can reach the retired signal.
+- **Consequence for the old ablation:** with or without Qloo, the plan is now identical *by design*. Qloo's contribution is the
+  research layer, not the choice of countries.
+- **Research layer on real cached data (showcase, 9 countries, 0 network calls):** 56–81% of each country's associations are general
+  catalogue; 19–44 titles per country are distinctive under four genre controls; local origin is unverified for cached results
+  (Qloo's release-country field was not stored before 2026-10-24). `npx tsx e2e/local-comps-check.mts` asserts Germany and Mexico
+  have no qualifying local-origin comparables.
+- **War Room on real cached data:** Germany withdrawal promotes Mexico, the next candidate on the list, with no new Qloo calls; a
+  40% budget cut turns France's dub into subtitles. Zero constraint violations.
+

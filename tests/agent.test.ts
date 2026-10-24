@@ -83,7 +83,7 @@ describe("runAgent (mock backend, end to end)", () => {
 });
 
 describe("replan (Distribution War Room)", () => {
-  it("removing a planned market invalidates only that decision, reuses research and investigates reserves", async () => {
+  it("removing a planned market promotes the next candidate on the filmmaker's list, with no new Qloo calls", async () => {
     const c = client();
     const s1 = await runAgent(input, { client: c });
     const target = s1.plan.markets.find((m) => m.language !== "English")!;
@@ -92,15 +92,30 @@ describe("replan (Distribution War Room)", () => {
 
     const rev = s2.revisions.at(-1)!;
     expect(rev.invalidated.some((x) => x.startsWith(target.name))).toBe(true);
-    expect(rev.decisions.map((d) => d.action)).toContain("research_reserve_markets");
+    expect(rev.decisions.map((d) => d.action)).toEqual(["reuse_evidence", "skip_research"]);
     expect(rev.reusedMarkets.sort()).toEqual(Object.keys(s1.research).sort());
-    expect(rev.newlyResearched.length).toBeGreaterThan(0);
-    // Each new market costs comps + every usable reference baseline, 2 pages each; reused markets cost nothing.
-    const usableRefs = s1.context!.references.filter((r) => r.ids.length && r.globalIds.length).length;
-    expect(c.liveCallCount - callsBefore).toBe(rev.newlyResearched.length * 2 * (1 + usableRefs));
+    expect(c.liveCallCount).toBe(callsBefore);
+    const added = s2.plan.markets.filter((m) => !s1.plan.markets.some((x) => x.code === m.code));
+    expect(added.length).toBeGreaterThan(0);
+    const unplannedBefore = input.targetMarkets.filter((code) => !s1.plan.markets.some((m) => m.code === code) && code !== target.code);
+    for (const m of added) expect(unplannedBefore.indexOf(m.code)).toBeLessThan(unplannedBefore.length);
+    expect(rev.changes.filter((ch) => ch.text.startsWith("Added")).every((ch) => ch.driver !== "summary" && /priority order/.test(ch.text))).toBe(true);
     expect(s2.plan.markets.map((m) => m.code)).not.toContain(target.code);
     expect(s2.violations).toEqual([]);
     expect(s2.trace.map((e) => e.state)).toContain("IMPACT_ANALYSIS");
+  });
+
+  it("researches suggested reserves only when the filmmaker's list runs out, and labels them as suggestions", async () => {
+    const c = client();
+    const s1 = await runAgent({ ...input, targetMarkets: ["US", "GB", "ES", "MX", "DE"], constraints: { budgetUsd: 70000, maxMarkets: 5 } }, { client: c });
+    const callsBefore = c.liveCallCount;
+    const s2 = await replan(s1, { excludedMarkets: ["DE"] }, { client: c });
+    const rev = s2.revisions.at(-1)!;
+    expect(rev.decisions.map((d) => d.action)).toContain("research_reserve_markets");
+    expect(MARKETS.find((m) => m.code === rev.newlyResearched[0])?.language).toBe("German");
+    const usableRefs = s1.context!.references.filter((r) => r.ids.length && r.globalIds.length).length;
+    expect(c.liveCallCount - callsBefore).toBe(rev.newlyResearched.length * 2 * (1 + usableRefs));
+    expect(rev.decisions.find((d) => d.action === "research_reserve_markets")!.reason).toMatch(/not audience evidence/);
   });
 
   it("a 40% budget cut needs no new Qloo calls and stays within budget", async () => {
@@ -121,15 +136,6 @@ describe("replan (Distribution War Room)", () => {
     expect(s2.violations).toEqual([]);
   });
 
-  it("researches same-language reserves first when a localized market is lost", async () => {
-    const c = client();
-    const s1 = await runAgent({ ...input, targetMarkets: ["US", "GB", "FR", "ES", "MX", "DE"] }, { client: c });
-    const lost = s1.plan.markets.find((m) => m.language === "Spanish") ?? s1.plan.markets.find((m) => m.mode !== "original")!;
-    const s2 = await replan(s1, { excludedMarkets: [lost.code] }, { client: c });
-    const first = s2.revisions.at(-1)!.newlyResearched[0];
-    expect(MARKETS.find((m) => m.code === first)?.language).toBe(lost.language === "Spanish" || lost.language === "German" ? lost.language : expect.any(String));
-  });
-
   it("a budget cut chooses not to research and tags changes as cost-driven", async () => {
     const c = client();
     const s1 = await runAgent({ ...input, constraints: { budgetUsd: 150000, maxMarkets: 5 } }, { client: c });
@@ -138,7 +144,7 @@ describe("replan (Distribution War Room)", () => {
     expect(rev.decisions.map((d) => d.action)).toEqual(["reuse_evidence", "skip_research"]);
     const drivers = rev.changes.filter((ch) => ch.driver !== "summary").map((ch) => ch.driver);
     expect(drivers.length).toBeGreaterThan(0);
-    expect(drivers.every((d) => d === "cost" || d === "cultural-evidence")).toBe(true);
+    expect(drivers.every((d) => d === "cost" || d === "priority" || d === "constraint")).toBe(true);
     expect(drivers).toContain("cost");
   });
 

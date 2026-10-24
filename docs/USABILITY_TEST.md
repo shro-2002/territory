@@ -11,7 +11,7 @@ Tasks (observe, do not help):
 5. Edit the brief with a film you know; run it. "Is anything here wrong or surprising?"
 6. Export the brief. "Would you share this with a co-producer or sales agent? What is missing?"
 
-Measures: task success (y/n), time to War Room, misreadings of the score (e.g. treating it as box office), quoted feedback
+Measures: task success (y/n), time to War Room, misreadings of the evidence (e.g. treating associations as audience demand or as a ranking), quoted feedback
 verbatim, would-use rating 1–5 with reason. **Report only real sessions; do not paraphrase into endorsements.**
 
 Results: _none collected yet._

@@ -1,56 +1,42 @@
 import type { MarketResearch, Revision, Session } from "../agent/agent";
 import { marketByCode } from "./markets";
+import { SHOWN_PER_GROUP } from "./nearby-titles";
 import type { LocalizationMode, Plan } from "./planner";
 
 /**
  * Presentation-only derivations. Everything here is computed from a Session's plan, research and
- * constraints; nothing is estimated or invented. Markets are never graded "strong" or "weak": the score
- * is a relative taste-overlap ratio, so the UI states the ratio and how stable it is, nothing more.
+ * constraints; nothing is estimated or invented. Markets are never ranked or graded by Qloo evidence:
+ * the plan follows the filmmaker's priority order and stated costs, and Qloo evidence is shown as
+ * associations to investigate (catalogue vs distinctive under four genre controls), never as demand.
  */
-
-// 1× is the score's definition point (comps survive exactly as well as the genre baseline), not a tuned threshold.
-const BASELINE = 1;
-// Above this, "N× as much" reads more naturally than "N% more". Wording only.
-const RATIO_WORDING = 2;
-
-/** How the comps' overlap compares with the genre baseline across every leave-one-out baseline check. */
-export type BaselineComparison = "above" | "mixed" | "below" | "unknown";
-export type EvidenceStrength = "moderate" | "low" | "none";
-
-export interface Reading {
-  /** Plain-English ratio, e.g. "11% more of your comps' taste survives here than a typical genre's." */
-  overlap: string;
-  comparison: BaselineComparison;
-  comparisonLabel: string;
-}
-
-const COMPARISON_LABEL: Record<BaselineComparison, string> = {
-  above: "Above a typical genre, however it is measured",
-  mixed: "Close to a typical genre; the result shifts with the comparison",
-  below: "Below a typical genre, however it is measured",
-  unknown: "Not enough evidence to compare",
-};
-
-export function readingOf(r: Pick<MarketResearch, "score" | "scoreRange">): Reading {
-  if (r.score === null) return { overlap: "Qloo returned too little overlapping data to read this market.", comparison: "unknown", comparisonLabel: COMPARISON_LABEL.unknown };
-  const [lo, hi] = r.scoreRange ?? [r.score, r.score];
-  const comparison: BaselineComparison = lo > BASELINE ? "above" : hi < BASELINE ? "below" : "mixed";
-  const pct = Math.round(Math.abs(r.score - BASELINE) * 100);
-  const overlap =
-    r.score >= RATIO_WORDING ? `${r.score.toFixed(1)}× as much of your comparable films' taste carries over here as a typical genre's.`
-    : pct === 0 ? "About as much of your comparable films' taste carries over here as a typical genre's."
-    : `${pct}% ${r.score > BASELINE ? "more" : "less"} of your comparable films' taste carries over here than a typical genre's.`;
-  return { overlap, comparison, comparisonLabel: COMPARISON_LABEL[comparison] };
-}
-
-export function evidenceOf(r: Pick<MarketResearch, "confidence">): EvidenceStrength {
-  return r.confidence ?? "none";
-}
 
 export const MODE_LABEL: Record<LocalizationMode, string> = { original: "Original language", subtitle: "Subtitles", dub: "Dubbing" };
 
 export function formatLabel(mode: LocalizationMode, language: string): string {
   return mode === "original" ? "Original language — no localization" : `${MODE_LABEL[mode]} in ${language}`;
+}
+
+/** What Qloo surfaced for one market, as counts the UI can show without implying fit or demand. */
+export interface EvidenceSummary {
+  gap: string | null;
+  titlesFound: number;
+  catalogue: number;
+  distinctive: number;
+  localOrigin: number;
+  originUnknown: number;
+  controlsTested: number;
+}
+
+export function evidenceSummary(r: MarketResearch | undefined): EvidenceSummary {
+  if (!r) return { gap: "Not researched", titlesFound: 0, catalogue: 0, distinctive: 0, localOrigin: 0, originUnknown: 0, controlsTested: 0 };
+  const c = r.nearby.counts;
+  return { gap: r.evidenceGap ?? null, titlesFound: r.titlesFound, catalogue: r.nearby.genericCount, distinctive: c.localOrigin + c.international + c.originUnknown, localOrigin: c.localOrigin, originUnknown: c.originUnknown, controlsTested: r.nearby.controlsTested };
+}
+
+/** One short line on what Qloo found, e.g. "67 of 100 associated titles are general catalogue; 33 distinctive under 4 controls." */
+export function evidenceLine(e: EvidenceSummary): string {
+  if (e.gap) return `Research gap: ${e.gap}.`;
+  return `${e.catalogue} of ${e.titlesFound} associated titles are general catalogue here; ${e.distinctive} are distinctive under ${e.controlsTested} genre controls${e.localOrigin ? `, ${e.localOrigin} with verified local production origin` : ""}.`;
 }
 
 export interface StrategyItem {
@@ -59,11 +45,10 @@ export interface StrategyItem {
   language: string;
   mode: LocalizationMode;
   formatLabel: string;
-  score: number;
-  reading: Reading;
-  evidence: EvidenceStrength;
-  scoreRange: [number, number] | null;
-  localComps: string[];
+  /** 1-based position in the filmmaker's candidate list; null for a Territory-suggested reserve. */
+  priority: number | null;
+  evidence: EvidenceSummary;
+  localOrigin: string[];
   reason: string;
 }
 
@@ -74,62 +59,72 @@ function costReason(m: Plan["markets"][number], plan: Plan): string {
   return sharing.length ? `It shares ${what} with ${sharing.join(" and ")}, so it adds no localization cost of its own.` : `The plan funds ${what} for it.`;
 }
 
+/** 1-based position on the filmmaker's candidate list, or null for a Territory-suggested reserve. */
+export function candidateRank(session: Session, code: string): number | null {
+  const i = session.input.targetMarkets.indexOf(code);
+  return i >= 0 ? i + 1 : null;
+}
+
+function priorityReason(code: string, session: Session): string {
+  const rank = candidateRank(session, code);
+  return rank ? `#${rank} on your candidate list.` : "Suggested by Territory after a market was lost (same language or no localization cost), not by audience evidence.";
+}
+
 export function strategyItems(session: Session): StrategyItem[] {
   return session.plan.markets.map((m) => {
     const r = session.research[m.code];
-    const reading = readingOf(r);
     return {
       code: m.code,
       name: m.name,
       language: m.language,
       mode: m.mode,
       formatLabel: formatLabel(m.mode, m.language),
-      score: m.score,
-      reading,
-      evidence: evidenceOf(r),
-      scoreRange: r.scoreRange,
-      localComps: r.nearby.localOrigin.slice(0, 3),
-      reason: `${reading.overlap} ${costReason(m, session.plan)}`,
+      priority: candidateRank(session, m.code),
+      evidence: evidenceSummary(r),
+      localOrigin: r?.nearby.localOrigin.slice(0, 3) ?? [],
+      reason: `${priorityReason(m.code, session)} ${costReason(m, session.plan)}`,
     };
   });
 }
 
 const listNames = (names: string[]) => (names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`);
-const overlaps = (a: [number, number], b: [number, number]) => a[0] <= b[1] && b[0] <= a[1];
 
 /** What the user should treat with care before acting. Derived, then topped up with standing caveats. */
 export function uncertainties(session: Session): string[] {
   const out: string[] = [];
-  const items = strategyItems(session);
-  const low = items.filter((it) => it.evidence === "low").map((it) => it.name);
-  if (low.length) out.push(`Low-confidence evidence for ${listNames(low)}: the ratio moves noticeably depending on which genre baseline is used.`);
-  const tied = new Set<string>();
-  for (let i = 0; i + 1 < items.length; i++) {
-    const [a, b] = [items[i], items[i + 1]];
-    if (a.scoreRange && b.scoreRange && overlaps(a.scoreRange, b.scoreRange)) tied.add(a.name).add(b.name);
-  }
-  if (tied.size) out.push(`The order of ${listNames([...tied])} is not meaningful: their score ranges overlap.`);
+  const researched = Object.values(session.research);
+  const gaps = researched.filter((r) => r.evidenceGap).map((r) => marketByCode(r.code).name);
+  if (gaps.length) out.push(`Research gaps for ${listNames(gaps)}: Qloo associations could not be qualified there. That is missing evidence, not a reason to drop them.`);
+  const unknownOrigin = researched.filter((r) => !r.evidenceGap && r.nearby.counts.originUnknown > 0).map((r) => marketByCode(r.code).name);
+  if (unknownOrigin.length) out.push(`Production origin was not recorded for some distinctive titles in ${listNames(unknownOrigin)}, so local-origin links there are unverified.`);
   for (const comp of session.comps) {
     if (comp.status === "ambiguous") out.push(`"${comp.input.name}" matches more than one title in Qloo; Territory used ${comp.name ?? "the closest match"}${comp.year ? ` (${comp.year})` : ""}. Add a release year to the brief to be sure.`);
     if (comp.status === "unresolved") out.push(`"${comp.input.name}" was not found in Qloo, so it did not shape any result.`);
   }
-  for (const r of Object.values(session.research)) {
-    if (r.score === null) out.push(`${marketByCode(r.code).name}: not enough Qloo evidence, so Territory will not plan it — this is a gap, not a rejection.`);
-  }
-  out.push("Every score is relative taste overlap. None of it says whether a buyer, screens or paying audience exist in a market.");
-  out.push("An unreleased film is represented by its comps; different comps can change the shortlist.");
+  out.push("Most titles Qloo associates with your comps in a country are that country's general catalogue. \"Distinctive\" means only: not returned for four unrelated genres there.");
+  out.push("Nothing here measures audience preference, buyer interest or demand. Markets were chosen by your priority order and costs, not by Qloo.");
+  out.push("An unreleased film is represented by its comps; different comps change every association.");
   return out;
 }
 
+/** Questions to investigate next, built from what Qloo did and did not surface for the planned markets. */
 export function nextSteps(session: Session): string[] {
-  const top = session.plan.markets.slice(0, 3).map((m) => m.name);
-  const thin = Object.values(session.research).filter((r) => r.score === null).map((r) => marketByCode(r.code).name);
-  return [
-    top.length ? `Before pitching buyers in ${top.join(", ")}, check each market's nearby titles: most are that country's general catalogue, and the rest are tested against only four genres.` : "Loosen a constraint or try different comps, then re-run.",
-    "Check rights availability and festival timing with a sales agent active in each territory.",
-    "Replace the illustrative cost assumptions with real localization quotes and re-run.",
-    ...(thin.length ? [`Gather market-specific evidence for ${thin.join(", ")} before ruling them out.`] : []),
-  ];
+  const out: string[] = [];
+  for (const m of session.plan.markets.slice(0, 3)) {
+    const r = session.research[m.code];
+    if (!r || r.evidenceGap) {
+      out.push(`${m.name}: Qloo gave no qualified associations. What recent releases like your comps did local distributors acquire there?`);
+      continue;
+    }
+    const n = r.nearby;
+    if (n.localOrigin.length) out.push(`${m.name}: who distributed ${listNames(n.localOrigin.slice(0, 2))} there, and would they look at your film?`);
+    else if (n.originUnknown.length) out.push(`${m.name}: which of ${listNames(n.originUnknown.slice(0, Math.min(3, SHOWN_PER_GROUP)))} are ${m.name} productions? Qloo did not record their origin in these results.`);
+    else out.push(`${m.name}: no distinctive local-origin titles under the controls. Ask local acquisitions staff which comparable arthouse releases travelled there.`);
+  }
+  if (!session.plan.markets.length) out.push("Loosen a constraint or add candidate markets, then re-run.");
+  out.push("Check rights availability and festival timing with a sales agent active in each territory.");
+  out.push("Replace the illustrative cost assumptions with real localization quotes and re-run.");
+  return out;
 }
 
 export interface LanguageAction {
@@ -162,9 +157,8 @@ const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
 export function excludedReason(reason: string): string {
   if (reason === "market excluded by user") return "You removed this market.";
   if (reason.startsWith("language ")) return `You excluded ${reason.replace(/^language (.*) excluded by user$/, "$1")} localization.`;
-  if (reason === "insufficient Qloo evidence") return "Not enough Qloo evidence to plan it.";
   if (reason.startsWith("no cost assumption")) return "No localization cost was entered for its language.";
-  return "Outside the strongest candidates considered by the planner.";
+  return "Beyond the candidates the planner considers.";
 }
 
 export function budgetView(session: Session): BudgetView {
@@ -201,13 +195,14 @@ export function budgetView(session: Session): BudgetView {
   const excludedCodes = new Set(plan.excluded.map((e) => e.code));
   const paid = new Set(plan.languages.map((l) => l.language));
   for (const r of Object.values(research)) {
-    if (r.score === null || inPlan.has(r.code) || excludedCodes.has(r.code)) continue;
+    if (inPlan.has(r.code) || excludedCodes.has(r.code)) continue;
     const m = marketByCode(r.code);
     const needsNew = m.language !== input.originalLanguage && !paid.has(m.language);
     const sub = input.costs[m.language]?.subtitleUsd;
-    const parts = [capReached ? `Your ${c.maxMarkets}-market cap is reached and the selected markets add more together.` : "Adding it would cost more than the plan can absorb."];
+    const parts = [capReached ? `Your ${c.maxMarkets}-market cap is reached by markets higher on your list.` : "Adding it would cost more than the plan can absorb."];
     if (needsNew && sub !== undefined) parts.push(`${m.language} subtitles alone would add ${usd(sub)}.`);
-    deferred.push({ kind: "unselected", title: `${m.name} · ${r.score.toFixed(2)}×`, detail: parts.join(" ") });
+    const rank = candidateRank(session, r.code);
+    deferred.push({ kind: "unselected", title: rank ? `${m.name} · #${rank} on your list` : `${m.name} · suggested reserve`, detail: parts.join(" ") });
   }
   return { budget: c.budgetUsd, planned, remaining, usedShare: c.budgetUsd > 0 ? Math.min(1, planned / c.budgetUsd) : 0, actions, originalMarkets: plan.markets.filter((m) => m.mode === "original").map((m) => m.name), deferred };
 }

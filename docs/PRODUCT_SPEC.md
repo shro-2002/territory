@@ -14,17 +14,17 @@ per-language subtitle/dub cost assumptions, constraints (budget, max markets, ex
 
 ## Modules
 1. **Cultural Intelligence Atlas** — resolve comps (disambiguate), research each market with location-conditioned
-   Qloo neighbourhoods, taste-portability signal vs reference genres, nearby titles checked against same-country genre controls (catalogue vs distinctive, local origin only when Qloo records it), thin-evidence fallback to Qloo-suggested substitute comps.
-2. **Distribution War Room** — constraint changes trigger impact analysis → selective research → deterministic re-plan → independent verification → plain-language diff.
+   Qloo neighbourhoods; associations checked against same-country genre controls (catalogue vs distinctive, local origin only when Qloo records it), thin-evidence fallback to Qloo-suggested substitute comps.
+2. **Localization planner + War Room** — the filmmaker's candidates in priority order, fitted to budget and constraints (no Qloo input); constraint changes trigger impact analysis → selective research only when the candidate list runs out → deterministic re-plan → independent verification → plain-language diff.
 3. **Evidence Lab** — every Qloo call (params, status, latency, cache hit), claim ledger with provenance, experiment results, Qloo vs LLM-only comparison.
 
 ## Claim provenance (every report sentence carries one)
 `qloo` (cites call ids) · `external` (cited source) · `user` (input/assumption) · `hypothesis` (model assumption or guess) · `insufficient`.
 
 ## Non-goals / hard rules
-No audience-size, box-office or revenue numbers. No raw cross-query affinity comparison. No raw Qloo data in the repo.
+No audience-size, box-office or revenue numbers. No Qloo-derived ranking or selection of countries (taste-portability score retired 2026-10-24). No raw cross-query affinity comparison. No raw Qloo data in the repo.
 No copyrighted artwork. Mock data always labelled.
 
 ## Works today (live-verified 2026-10-23)
-Typed client, agent state machine, portability signal, planner + independent validator, replan with reuse, claim ledger, experiment harness.
+Typed client, agent state machine, planner + independent validator, replan with reuse, claim ledger, experiment harness.
 **Not yet:** UI, LLM narration, LLM-only baseline, deployment.

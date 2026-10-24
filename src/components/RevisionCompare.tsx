@@ -14,7 +14,7 @@ export interface HistoryEntry {
 }
 
 const DRIVER: Record<ChangeDriver, { label: string; color: string }> = {
-  "cultural-evidence": { label: "Qloo evidence", color: "var(--evidence)" },
+  priority: { label: "Your priority", color: "var(--evidence)" },
   cost: { label: "Cost", color: "var(--caution)" },
   constraint: { label: "Your constraint", color: "var(--accent)" },
 };
@@ -91,7 +91,7 @@ export function RevisionCompare({ history }: Props) {
             <p className="mt-4 text-sm leading-relaxed text-bone-dim">
               {stats.newlyResearched
                 ? <>Researched for this revision: <span className="text-bone">{rev.newlyResearched.map((c) => marketByCode(c).name).join(", ")}</span>.</>
-                : "Taste evidence does not change with budget or exclusions, so the existing research was enough."}
+                : "Qloo associations do not change with budget or exclusions, so the existing research was enough."}
               {stats.retainedUnusable > 0 && <> Kept but unusable: {rev.retainedUnusable.map((c) => marketByCode(c).name).join(", ")}.</>}
             </p>
             <details className="group mt-4 border-t border-line pt-4">

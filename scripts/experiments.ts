@@ -9,7 +9,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { pickCandidate } from "../src/lib/agent/resolve";
-import { buildContext, neighbourhood, researchMarket } from "../src/lib/agent/research";
+import { buildContext, neighbourhood, retiredPortabilitySignal } from "../src/lib/agent/research";
 import { MemoryCache, type QlooClient } from "../src/lib/qloo/client";
 import { createQlooClient } from "../src/lib/qloo/factory";
 import { jaccard, portability, spearman } from "../src/lib/territory/market-signal";
@@ -101,7 +101,7 @@ async function marketScores(compNames: string[]) {
   const ctx = await buildContext(client, Object.values(await ids(client, compNames)));
   const out: Record<string, { score: number | null; overlap: number; baseline: number | null; reason?: string }> = {};
   for (const code of E2_MARKETS) {
-    const r = await researchMarket(client, code, ctx);
+    const r = await retiredPortabilitySignal(client, code, ctx);
     out[code] = { score: r.score === null ? null : round(r.score), overlap: r.overlap, baseline: r.baselinePortability === null ? null : round(r.baselinePortability), reason: r.insufficientReason };
   }
   return { ctx, out };

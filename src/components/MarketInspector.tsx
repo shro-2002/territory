@@ -1,31 +1,22 @@
 "use client";
 
 import type { MarketResearch, Session } from "@/lib/agent/agent";
-import { NEIGHBOURHOOD_SIZE } from "@/lib/territory/market-signal";
 import { marketByCode, REFERENCE_SETS } from "@/lib/territory/markets";
 import { catalogueSentence, localOriginSentence, NearbyTitles, SHOWN_PER_GROUP } from "@/lib/territory/nearby-titles";
-import { evidenceOf, excludedReason, formatLabel, readingOf } from "@/lib/territory/view-model";
+import { candidateRank, excludedReason, formatLabel } from "@/lib/territory/view-model";
 import { ProvenanceTag } from "./ProvenanceTag";
-import { EvidenceMeter } from "./ui/Meter";
 
 type Props = { session: Session; code: string };
-
-function Bar({ value, max, tone }: { value: number; max: number; tone: string }) {
-  return (
-    <span className="block h-1.5 w-full overflow-hidden rounded-full bg-ink">
-      <span className="block h-full rounded-full" style={{ width: `${Math.min(100, (value / max) * 100)}%`, background: tone }} />
-    </span>
-  );
-}
 
 function verdict(session: Session, code: string): { label: string; tone: string; why: string } {
   const decision = session.plan.markets.find((m) => m.code === code);
   const excluded = session.plan.excluded.find((e) => e.code === code);
   const r = session.research[code];
-  if (decision) return { label: "In your plan", tone: "var(--accent)", why: `Selected — ${formatLabel(decision.mode, decision.language)}.` };
+  const rank = candidateRank(session, code);
+  const listed = rank ? `#${rank} on your candidate list` : "Suggested by Territory after a market was lost";
+  if (decision) return { label: "In your plan", tone: "var(--accent)", why: `${listed} — ${formatLabel(decision.mode, decision.language)}.` };
   if (excluded) return { label: "Excluded", tone: "var(--removed-ink)", why: excludedReason(excluded.reason) };
-  if (r?.score === null) return { label: "Insufficient evidence", tone: "var(--caution)", why: r.insufficientReason ?? "Too little overlapping data." };
-  if (r) return { label: "Researched, not selected", tone: "var(--evidence)", why: "Other markets add more value within your market cap and budget." };
+  if (r) return { label: "Researched, not in plan", tone: "var(--evidence)", why: `${listed}; markets higher on your list fill the cap or budget first.` };
   return { label: "Not researched", tone: "var(--bone-faint)", why: "Territory researches a market when it is a candidate or when a revision needs a replacement." };
 }
 
@@ -58,7 +49,6 @@ export function MarketInspector({ session, code }: Props) {
   const r: MarketResearch | undefined = session.research[code];
   const v = verdict(session, code);
   const claims = session.claims.filter((c) => c.text.startsWith(`${market.name}:`));
-  const reading = r ? readingOf(r) : null;
 
   return (
     <aside className="panel flex h-full flex-col p-6" aria-label={`${market.name} inspector`} aria-live="polite">
@@ -69,37 +59,17 @@ export function MarketInspector({ session, code }: Props) {
       </p>
       <p className="mt-3 text-sm leading-relaxed text-bone-dim">{v.why}</p>
 
-      {r && reading && r.score !== null && (
-        <div className="mt-5 space-y-3 border-t border-line pt-5 text-sm">
-          <p className="leading-relaxed text-bone">{reading.overlap}</p>
-          <p className="text-bone-dim">{reading.comparisonLabel}.</p>
-          <div className="flex items-center justify-between gap-3"><span className="text-bone-faint">Confidence</span><EvidenceMeter strength={evidenceOf(r)} /></div>
-          {r.scoreRange && <p className="text-xs leading-relaxed text-bone-faint">Overlap ratio {r.score.toFixed(2)}× (from {r.scoreRange[0].toFixed(2)} to {r.scoreRange[1].toFixed(2)} depending on which genre baseline is left out). Markets whose ranges overlap are not meaningfully different. This is taste overlap, not proof of buyer or audience demand.</p>}
-        </div>
-      )}
-      {r?.score === null && <p className="mt-5 rounded-xl border border-caution/40 bg-caution/10 p-3 text-sm text-bone">This is a gap in the evidence, not a rejection. Territory will not plan this market without more data.</p>}
+      {r?.evidenceGap && <p className="mt-5 rounded-xl border border-caution/40 bg-caution/10 p-3 text-sm text-bone">Research gap: {r.evidenceGap}. This is missing evidence, not a rejection; Territory still plans the market if your priorities and budget include it.</p>}
 
-      {r && r.score !== null && r.nearby.controlsTested > 0 && <NearbyTitlesBlock nearby={r.nearby} marketName={market.name} />}
+      {r && !r.evidenceGap && <NearbyTitlesBlock nearby={r.nearby} marketName={market.name} />}
 
-      {r && r.score !== null && (
+      {r && !r.evidenceGap && (
         <details className="group mt-5 border-t border-line pt-4">
-          <summary className="flex items-center justify-between text-sm text-bone-dim transition-colors hover:text-bone"><span>How this was measured</span><span aria-hidden className="transition-transform group-open:rotate-45">+</span></summary>
-          <div className="mt-4 space-y-3 text-xs">
-            <p className="text-bone-dim"><span className="text-bone">{r.overlap}</span> of your comps&apos; {NEIGHBOURHOOD_SIZE} closest titles stay in the top {NEIGHBOURHOOD_SIZE} when Qloo conditions on {market.name}.</p>
-            <div className="grid grid-cols-[6.5rem_1fr_2.5rem] items-center gap-3">
-              <span className="text-accent">Your comps</span><Bar value={r.portability} max={Math.max(r.portability, ...Object.values(r.referencePortabilities), 0.01)} tone="var(--accent)" /><span className="text-right tabular-nums">{Math.round(r.portability * 100)}%</span>
-              {REFERENCE_SETS.map((ref) => {
-                const val = r.referencePortabilities[ref.id];
-                return (
-                  <div key={ref.id} className="contents">
-                    <span className="capitalize text-bone-faint">{ref.id}</span>
-                    {val === undefined ? <span className="text-bone-faint">n/a</span> : <Bar value={val} max={Math.max(r.portability, ...Object.values(r.referencePortabilities), 0.01)} tone="var(--line-2)" />}
-                    <span className="text-right tabular-nums text-bone-faint">{val === undefined ? "" : `${Math.round(val * 100)}%`}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="leading-relaxed text-bone-faint">Reference genres show how much any taste survives in this market; dividing by their mean removes market-wide effects. Relative cultural overlap — not audience size, box office or demand.</p>
+          <summary className="flex items-center justify-between text-sm text-bone-dim transition-colors hover:text-bone"><span>How this was checked</span><span aria-hidden className="transition-transform group-open:rotate-45">+</span></summary>
+          <div className="mt-4 space-y-3 text-xs leading-relaxed text-bone-faint">
+            <p>Qloo returned <span className="text-bone">{r.titlesFound}</span> titles associated with your comps when conditioned on {market.name}. Each was checked against the titles Qloo returns there for {r.nearby.controlsTested} unrelated genre sets ({REFERENCE_SETS.map((x) => x.id).join(", ")}).</p>
+            <p>A title that also appears for an unrelated genre is the country&apos;s general catalogue. The rest are distinctive only relative to those genres. Production origin comes from Qloo&apos;s release-country field when it was recorded.</p>
+            <p>None of this measures audience preference, buyer interest or demand, and it did not decide whether {market.name} is in your plan.</p>
             {r.fallback && <p className="text-bone-dim">Fallback used: {r.fallback}.</p>}
           </div>
         </details>

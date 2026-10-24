@@ -7,7 +7,6 @@ import type { Provenance } from "@/lib/agent/claims";
 import type { CallRecord } from "@/lib/qloo/types";
 import { NEIGHBOURHOOD_SIZE } from "@/lib/territory/market-signal";
 import { marketByCode } from "@/lib/territory/markets";
-import { evidenceOf } from "@/lib/territory/view-model";
 import { ProvenanceTag } from "./ProvenanceTag";
 import { TracePanel } from "./TracePanel";
 import { SectionHead } from "./ui/SectionHead";
@@ -47,7 +46,7 @@ const PROVENANCE_MEANING: Record<Provenance, string> = {
 };
 
 function localOriginCell(r: MarketResearch): string {
-  if (r.score === null) return r.insufficientReason ?? "—";
+  if (r.evidenceGap) return `Gap: ${r.evidenceGap}`;
   if (r.nearby.localOrigin.length) return r.nearby.localOrigin.slice(0, 4).join(", ");
   return r.nearby.counts.originUnknown ? "None verified (origin not recorded)" : "None found under controls";
 }
@@ -86,8 +85,8 @@ function PlainEnglish({ session, lastCalls }: { session: Session; lastCalls: { l
     <div className="grid gap-8 lg:grid-cols-2">
       <div className="space-y-4 text-[0.95rem] leading-relaxed text-bone-dim">
         <p>Qloo is a taste graph. Territory asks it one question about <span className="text-bone">{comps}</span>: which films do audiences who love these also love?</p>
-        <p>It asks again inside each country. A market looks promising when <span className="text-bone">more of that taste survives there</span> than for typical genres such as horror or comedy.</p>
-        <p>The planner then turns those readings into a budgeted plan with plain arithmetic. It never predicts box office or audience size{lastCalls ? `, and it made ${lastCalls.live + lastCalls.cached} Qloo requests to get here (${lastCalls.live} live).` : "."}</p>
+        <p>It asks again inside each country, and again for four unrelated genres there. Titles that come back for those genres too are <span className="text-bone">the country&apos;s general catalogue</span>; the rest are distinctive associations worth investigating.</p>
+        <p>Separately, the planner fits your candidate markets, in your priority order, to your budget with plain arithmetic. Qloo evidence never enters it, and nothing here predicts box office, audience size or demand{lastCalls ? `, and it made ${lastCalls.live + lastCalls.cached} Qloo requests to get here (${lastCalls.live} live).` : "."}</p>
       </div>
       <div>
         <p className="eyebrow mb-3">Where each claim comes from</p>
@@ -103,7 +102,7 @@ function PlainEnglish({ session, lastCalls }: { session: Session; lastCalls: { l
 
 function EvidenceDetail({ session }: { session: Session }) {
   const [filter, setFilter] = useState<Provenance | "all">("all");
-  const rows = Object.values(session.research).sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+  const rows = Object.values(session.research);
   const claims = session.claims.filter((c) => filter === "all" || c.provenance === filter);
   return (
     <div className="space-y-8">
@@ -116,15 +115,14 @@ function EvidenceDetail({ session }: { session: Session }) {
       <div className="overflow-x-auto">
         <p className="eyebrow mb-3">Market by market</p>
         <table className="w-full min-w-[40rem] text-left text-sm">
-          <thead className="text-xs text-bone-faint"><tr><th className="pb-2 font-normal">Market</th><th className="pb-2 font-normal">Score</th><th className="pb-2 font-normal">Range</th><th className="pb-2 font-normal">Overlap</th><th className="pb-2 font-normal">Confidence</th><th className="pb-2 font-normal">Distinctive local-origin titles</th></tr></thead>
+          <thead className="text-xs text-bone-faint"><tr><th className="pb-2 font-normal">Market</th><th className="pb-2 font-normal">Associated</th><th className="pb-2 font-normal">General catalogue</th><th className="pb-2 font-normal">Distinctive</th><th className="pb-2 font-normal">Distinctive local-origin titles</th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.code} className="border-t border-line align-top">
                 <td className="py-2 pr-3">{marketByCode(r.code).name}</td>
-                <td className="py-2 pr-3 tabular-nums">{r.score === null ? "—" : `${r.score.toFixed(2)}×`}</td>
-                <td className="py-2 pr-3 tabular-nums text-bone-dim">{r.scoreRange ? `${r.scoreRange[0].toFixed(2)}–${r.scoreRange[1].toFixed(2)}×` : "—"}</td>
-                <td className="py-2 pr-3 tabular-nums text-bone-dim">{r.overlap}/{NEIGHBOURHOOD_SIZE}</td>
-                <td className="py-2 pr-3 text-bone-dim capitalize">{evidenceOf(r)}</td>
+                <td className="py-2 pr-3 tabular-nums">{r.titlesFound}</td>
+                <td className="py-2 pr-3 tabular-nums text-bone-dim">{r.evidenceGap ? "—" : r.nearby.genericCount}</td>
+                <td className="py-2 pr-3 tabular-nums text-bone-dim">{r.evidenceGap ? "—" : r.titlesFound - r.nearby.genericCount}</td>
                 <td className="py-2 text-bone-dim">{localOriginCell(r)}</td>
               </tr>
             ))}
@@ -206,12 +204,12 @@ function Validation({ summary }: { summary: ExperimentSummary }) {
   return (
     <div className="space-y-6 text-sm">
       <div>
-        <p className="eyebrow mb-2">How the score is computed</p>
-        <p className="leading-relaxed text-bone-dim">score(market) = portability(comps, market) ÷ mean portability of reference genres in that market, where portability is the share of the comps&apos; {NEIGHBOURHOOD_SIZE} closest Qloo titles that stay in the top {NEIGHBOURHOOD_SIZE} once conditioned on the market. Above 1× means the comps travel there better than typical genres do. It is ordinal and untested against release outcomes.</p>
+        <p className="eyebrow mb-2">Retired metric · taste portability</p>
+        <p className="leading-relaxed text-bone-dim">Territory used to rank markets by how much of the comps&apos; {NEIGHBOURHOOD_SIZE}-title Qloo neighbourhood survived in each country, relative to four reference genres. An audit on cached data found 42–80% of that overlap was the country&apos;s general catalogue, the ranking reordered once catalogue titles were removed, and a Spanish-language film scored below a typical genre in Spain and Mexico. The score no longer exists in the product; the experiments below are kept as the record of that test. Method: docs/EVALUATION.md.</p>
       </div>
       {summary.experiments && (
         <div>
-          <p className="eyebrow mb-2">API feasibility experiments (live)</p>
+          <p className="eyebrow mb-2">API feasibility experiments (live; E2–E5 tested the retired metric)</p>
           <ul className="space-y-1">
             {summary.experiments.map((e) => (
               <li key={e.id} className="grid gap-2 sm:grid-cols-[2.5rem_6.5rem_1fr]">

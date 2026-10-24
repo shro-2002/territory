@@ -8,7 +8,7 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { buildContext, neighbourhood, researchMarket } from "../../src/lib/agent/research";
+import { buildContext, neighbourhood, retiredPortabilitySignal } from "../../src/lib/agent/research";
 import { resolveComp } from "../../src/lib/agent/resolve";
 import { QlooClient } from "../../src/lib/qloo/client";
 import { FileCache, PRIVATE_DIR } from "../../src/lib/qloo/factory";
@@ -31,7 +31,7 @@ for (const { id, input } of EVAL_SCENARIOS.filter((s: any) => s.id !== "cold-sta
   const rows: any[] = [];
   for (const code of input.targetMarkets) {
     const loc = marketByCode(code).locationQuery;
-    const r = await researchMarket(client, code, ctx);
+    const r = await retiredPortabilitySignal(client, code, ctx);
     const Q = (await neighbourhood(client, compIds, loc)).ids.slice(0, K);
     const refs = ctx.references.filter((x: any) => x.ids.length && x.globalIds.length);
     const refLocal: Record<string, string[]> = {};

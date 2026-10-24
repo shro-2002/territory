@@ -11,7 +11,7 @@ async function figure(page: Page, label: string) {
 
 test("judge journey: brief edit, strategy, budget maths, atlas, Germany withdrawal, budget cut, comparison, evidence, export", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Find the world your film belongs to.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Research the world before your film travels.");
   await expect(page.getByText("Mock data — not Qloo evidence")).toBeAttached();
 
   // Film brief editing: change the budget through the dialog and run with it.
@@ -23,10 +23,13 @@ test("judge journey: brief edit, strategy, budget maths, atlas, Germany withdraw
   await expect(dialog).toBeHidden();
 
   // Research completion.
-  await expect(page.getByRole("heading", { name: /^Investigate .* first\.$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Plan for .*\.$/ })).toBeVisible();
+  await expect(page.getByText("Questions to investigate", { exact: true })).toBeVisible();
   await expect(page.getByText("Independent check passed —")).toBeVisible();
   await expect(page.getByText("What remains uncertain", { exact: true })).toBeVisible();
-  await expect(page.locator("main")).not.toContainText(/strong fit|weak fit|promising fit/i);
+  await expect(page.locator("main")).not.toContainText(/strong fit|weak fit|promising fit|taste overlap|typical genre/i);
+  // No taste-portability ratio is shown anywhere on the page.
+  await expect(page.locator("main")).not.toContainText(/\d\.\d\d×/);
 
   // Budget calculations: available = planned + remaining, and funded languages sum to planned.
   const [available, planned, remaining] = [await figure(page, "Available"), await figure(page, "Planned spend"), await figure(page, "Remaining")];
@@ -48,6 +51,7 @@ test("judge journey: brief edit, strategy, budget maths, atlas, Germany withdraw
   await page.getByRole("button", { name: /Germany’s distributor pulls out/ }).click();
   await expect(page.getByText("Revision v1 → v2")).toBeVisible();
   await expect(page.getByText("Dropped Germany — market excluded")).toBeVisible();
+  await expect(page.locator('[aria-label="Strategy revision"]')).toContainText("next in your priority order that fits");
   await expect(page.locator('[aria-label="Strategy revision"] li', { hasText: "Germany" }).first()).toContainText("Removed");
 
   // Budget cut: exactly 40% off the current budget.
@@ -79,6 +83,8 @@ test("judge journey: brief edit, strategy, budget maths, atlas, Germany withdraw
   expect(md).toContain("MOCK DATA — not Qloo evidence");
   expect(md).toContain(`budget ${usd(54000)}`);
   expect(md).toContain("excluded markets Germany");
+  expect(md).toContain("Qloo evidence did not rank or select these markets");
+  expect(md).not.toMatch(/\| Lift \||taste alignment|\d\.\d\d×/);
 });
 
 test("brief dialog closes with Escape and does not start research", async ({ page }) => {

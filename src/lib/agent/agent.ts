@@ -51,8 +51,8 @@ export interface Session {
   revisions: Revision[];
 }
 
-/** What drove a change: Qloo taste evidence, money, or a hard user constraint. */
-export type ChangeDriver = "cultural-evidence" | "cost" | "constraint";
+/** What drove a change: the filmmaker's priority order, money, or a hard user constraint. Never Qloo evidence. */
+export type ChangeDriver = "priority" | "cost" | "constraint";
 
 export interface PlanChange {
   text: string;
@@ -150,24 +150,29 @@ export async function runAgent(rawInput: unknown, { client, onEvent }: AgentDeps
 }
 
 async function researchMarkets(client: QlooClient, codes: string[], ctx: ResearchContext, into: Record<string, MarketResearch>, onDone?: (r: MarketResearch) => void) {
-  await Promise.all(
+  const results = await Promise.all(
     codes.map(async (code) => {
-      into[code] = await researchMarket(client, code, ctx);
-      onDone?.(into[code]);
+      const r = await researchMarket(client, code, ctx);
+      onDone?.(r);
+      return r;
     }),
   );
+  // Insert in the requested (priority) order, not completion order, so every list reads in the filmmaker's order.
+  for (const r of results) into[r.code] = r;
 }
 
 function marketLine(r: MarketResearch) {
   const name = marketByCode(r.code).name;
-  return r.score === null ? `${name}: insufficient — ${r.insufficientReason}` : `${name}: ${r.overlap}/100 neighbours survive, ${r.score.toFixed(2)}× reference genres`;
+  if (r.evidenceGap) return `${name}: evidence gap — ${r.evidenceGap}`;
+  const n = r.nearby;
+  return `${name}: ${r.titlesFound} associated titles; ${n.genericCount} also returned for unrelated genres, ${r.titlesFound - n.genericCount} distinctive under ${n.controlsTested} controls (${n.counts.localOrigin} with verified local origin)`;
 }
 
 /** Thin evidence → widen comps with the comps' closest Qloo titles and retry those markets, once. */
 async function verifyAndFallback(client: QlooClient, research: Record<string, MarketResearch>, ctx: ResearchContext, t: Tracer) {
-  const thin = Object.values(research).filter((r) => r.score === null && !r.insufficientReason?.startsWith("query failed")).slice(0, LIMITS.maxFallbackMarkets);
+  const thin = Object.values(research).filter((r) => r.evidenceGap && !r.evidenceGap.startsWith("query failed")).slice(0, LIMITS.maxFallbackMarkets);
   if (thin.length === 0) {
-    t.log("EVIDENCE_VERIFICATION", "Every researched market has enough overlapping titles and a reference baseline.");
+    t.log("EVIDENCE_VERIFICATION", "Every researched market returned associated titles and at least two genre controls to qualify them against.");
     return;
   }
   const widened = await substituteContext(client, ctx);
@@ -177,20 +182,20 @@ async function verifyAndFallback(client: QlooClient, research: Record<string, Ma
   }
   for (const r of thin) {
     const retry = await researchMarket(client, r.code, widened.ctx);
-    research[r.code] = { ...retry, fallback: `original comps thin (${r.insufficientReason}); added ${widened.added.join(", ")}` };
+    research[r.code] = { ...retry, fallback: `original comps thin (${r.evidenceGap}); added ${widened.added.join(", ")}` };
   }
-  t.log("EVIDENCE_VERIFICATION", `Thin evidence in ${thin.map((r) => r.code).join(", ")}; retried with Qloo's closest titles (${widened.added.join(", ")}). Now: ${thin.map((r) => `${r.code} ${research[r.code].score === null ? "still insufficient" : "supported"}`).join(", ")}.`);
+  t.log("EVIDENCE_VERIFICATION", `Thin evidence in ${thin.map((r) => r.code).join(", ")}; retried with Qloo's closest titles (${widened.added.join(", ")}). Now: ${thin.map((r) => `${r.code} ${research[r.code].evidenceGap ? "still a gap" : "qualified"}`).join(", ")}.`);
 }
 
 function finish(input: AgentInput, comps: ResolvedComp[], context: ResearchContext, research: Record<string, MarketResearch>, t: Tracer, client: QlooClient, revisions: Revision[], version = 1): Session {
-  const candidates = Object.values(research).map((r) => ({ ...marketByCode(r.code), score: r.score }));
+  const candidates = Object.keys(research).map((code, i) => ({ ...marketByCode(code), priority: priorityOf(input, code, i) }));
   const plan = buildPlan({ candidates, constraints: input.constraints, costs: input.costs, originalLanguage: input.originalLanguage });
-  t.log(version === 1 ? "STRATEGY_CONSTRUCTION" : "STRATEGY_REVISION", plan.markets.length ? `Selected ${plan.markets.map((m) => `${m.code} (${m.mode})`).join(", ")} for $${plan.totalCostUsd.toLocaleString("en-US")}` : "No market satisfies the constraints with sufficient evidence.");
+  t.log(version === 1 ? "STRATEGY_CONSTRUCTION" : "STRATEGY_REVISION", plan.markets.length ? `Selected ${plan.markets.map((m) => `${m.code} (${m.mode})`).join(", ")} for $${plan.totalCostUsd.toLocaleString("en-US")}` : "No candidate market fits the budget, cap and exclusions.");
   const violations = validatePlan(plan, input.constraints, input.costs, input.originalLanguage);
   t.log(version === 1 ? "CONSTRAINT_VALIDATION" : "VERIFICATION", violations.length ? `VIOLATIONS: ${violations.join("; ")}` : "Independent check passed: budget, market cap, exclusions and subtitle rule satisfied.");
   const claims = claimsFor({ input, comps, research, plan, calls: client.calls, modeReach: MODE_REACH });
-  const supported = Object.values(research).filter((r) => r.score !== null).length;
-  t.log("FINAL_REPORT", `${claims.length} claims: ${countBy(claims)}. ${supported}/${Object.keys(research).length} markets supported by Qloo evidence.`);
+  const supported = Object.values(research).filter((r) => !r.evidenceGap).length;
+  t.log("FINAL_REPORT", `${claims.length} claims: ${countBy(claims)}. Qloo associations qualified in ${supported}/${Object.keys(research).length} markets; market selection used only your priority order, costs and constraints.`);
   return {
     version, input, comps, context, research, plan, violations, claims, trace: t.events, revisions,
     status: violations.length ? "failed" : supported < Object.keys(research).length || comps.some((c) => c.status !== "resolved") ? "degraded" : "complete",
@@ -198,7 +203,7 @@ function finish(input: AgentInput, comps: ResolvedComp[], context: ResearchConte
 }
 
 function failedSession(input: AgentInput, comps: ResolvedComp[], t: Tracer): Session {
-  return { version: 1, input, comps, context: null, research: {}, plan: { markets: [], languages: [], totalCostUsd: 0, totalValue: 0, excluded: [] }, violations: [], claims: [], trace: t.events, status: "failed", revisions: [] };
+  return { version: 1, input, comps, context: null, research: {}, plan: { markets: [], languages: [], totalCostUsd: 0, totalReach: 0, excluded: [] }, violations: [], claims: [], trace: t.events, status: "failed", revisions: [] };
 }
 
 /**
@@ -227,19 +232,21 @@ export async function replan(session: Session, patch: Partial<Constraints>, { cl
   const retainedUnusable = researched.filter((c) => !usable(marketByCode(c)));
   t.log("IMPACT_ANALYSIS", `${invalidated.length ? `Invalidated: ${invalidated.join("; ")}.` : "No current decision is invalidated."} Evidence for all ${researched.length} researched markets stays valid (taste evidence does not depend on budget or exclusions)${retainedUnusable.length ? `; ${retainedUnusable.join(", ")} retained but unusable` : ""}.`);
 
-  const decisions: ToolDecision[] = [{ action: "reuse_evidence", reason: "constraint changes do not alter Qloo taste evidence", markets: researched.filter((c) => !retainedUnusable.includes(c)) }];
+  const decisions: ToolDecision[] = [{ action: "reuse_evidence", reason: "constraint changes do not alter the Qloo associations already gathered", markets: researched.filter((c) => !retainedUnusable.includes(c)) }];
   const lost = session.plan.markets.filter((m) => !usable(m));
-  const usableCandidates = researched.filter((c) => !retainedUnusable.includes(c) && session.research[c].score !== null);
-  const needMore = lost.length > 0 && usableCandidates.length < after.maxMarkets + lost.length;
+  const usableCandidates = researched.filter((c) => !retainedUnusable.includes(c));
+  const needMore = usableCandidates.length < after.maxMarkets;
   const research = { ...session.research };
   let newlyResearched: string[] = [];
   if (lost.length === 0) {
-    decisions.push({ action: "skip_research", reason: "no planned market was removed; the change only needs re-optimization over existing evidence" });
+    decisions.push({ action: "skip_research", reason: "no planned market was removed; the change only needs re-optimization over the same candidates" });
+  } else if (!needMore) {
+    decisions.push({ action: "skip_research", reason: `${lost.map((m) => m.name).join(", ")} lost, but ${usableCandidates.length} of your candidate markets remain for a ${after.maxMarkets}-market cap; the next ones in your priority order already have Qloo evidence` });
   } else {
     const reserves = rankReserves(session, after, lost).slice(0, LIMITS.maxReserveResearch);
     if (reserves.length === 0) decisions.push({ action: "skip_research", reason: "no unresearched reserve market is eligible under the new constraints" });
     else {
-      decisions.push({ action: "research_reserve_markets", reason: `${lost.map((m) => m.name).join(", ")} lost${needMore ? " and too few eligible researched markets remain" : ""}; replacements ranked by ${reserves.map((r) => `${marketByCode(r.code).name} (${r.why})`).join(", ")}`, markets: reserves.map((r) => r.code) });
+      decisions.push({ action: "research_reserve_markets", reason: `${lost.map((m) => m.name).join(", ")} lost and only ${usableCandidates.length} candidate markets remain for a ${after.maxMarkets}-market cap; suggesting markets to investigate by localization logic, not audience evidence: ${reserves.map((r) => `${marketByCode(r.code).name} (${r.why})`).join(", ")}`, markets: reserves.map((r) => r.code) });
       newlyResearched = reserves.map((r) => r.code);
       await researchMarkets(client, newlyResearched, session.context, research, (r) => t.log("SELECTIVE_RESEARCH", `Reserve ${marketLine(r)}`, "progress", r.code, r.callIds));
     }
@@ -280,9 +287,9 @@ export function diffPlans(prev: Plan, next: Plan, ctx?: { before: Constraints; a
     if (n.has(code)) continue;
     const excluded = next.excluded.find((e) => e.code === code);
     if (ctx?.after.excludedMarkets.includes(code) || ctx?.after.excludedLanguages.includes(m.language)) changes.push({ text: `Dropped ${m.name} — ${excluded?.reason ?? "excluded"}`, driver: "constraint" });
-    else if (tighterCap) changes.push({ text: `Dropped ${m.name} — lowest value under the tighter ${ctx!.after.maxMarkets}-market cap`, driver: "constraint" });
-    else if (tighterBudget) changes.push({ text: `Dropped ${m.name} — after the budget cut, ${m.language} localization buys less value than the alternatives`, driver: "cost" });
-    else changes.push({ text: `Dropped ${m.name} — outscored by a market with stronger taste evidence`, driver: "cultural-evidence" });
+    else if (tighterCap) changes.push({ text: `Dropped ${m.name} — lowest in your priority order under the tighter ${ctx!.after.maxMarkets}-market cap`, driver: "constraint" });
+    else if (tighterBudget) changes.push({ text: `Dropped ${m.name} — after the budget cut, ${m.language} localization no longer fits alongside your higher-priority markets`, driver: "cost" });
+    else changes.push({ text: `Dropped ${m.name} — a market higher in your priority order now fits instead`, driver: "priority" });
   }
   for (const [code, m] of n) {
     const old = p.get(code);
@@ -291,9 +298,10 @@ export function diffPlans(prev: Plan, next: Plan, ctx?: { before: Constraints; a
       const fresh = ctx?.newlyResearched.includes(code);
       // Zero marginal localization cost (original language, or a language the plan already pays for) under a tighter budget is a cost-driven pick.
       const freeRide = m.mode === "original" || paidBefore.has(m.language);
-      const driver: ChangeDriver = tighterBudget && freeRide && !fresh ? "cost" : "cultural-evidence";
+      const driver: ChangeDriver = tighterBudget && freeRide && !fresh ? "cost" : "priority";
       const why = driver === "cost" ? (m.mode === "original" ? "no localization cost" : `${m.language} ${m.mode} already paid for`) : cost;
-      changes.push({ text: `Added ${m.name} — ${m.score.toFixed(2)}× taste lift${fresh ? " (researched for this revision)" : ""}, ${why}`, driver });
+      const source = fresh ? "suggested by Territory for investigation (researched for this revision; not evidence of demand)" : "next in your priority order that fits";
+      changes.push({ text: `Added ${m.name} — ${source}, ${why}`, driver });
     } else if (old.mode !== m.mode) {
       changes.push({ text: `${m.name}: ${old.mode} → ${m.mode}${modeReason(old.mode, m.mode, ctx?.after)}`, driver: ctx?.after.subtitleFirst && m.mode === "subtitle" ? "constraint" : "cost" });
     }
@@ -310,7 +318,13 @@ function modeReason(from: string, to: string, after?: Constraints) {
 }
 
 function summarizeResearch(codes: string[], research: Record<string, MarketResearch>) {
-  return codes.map((c) => `${c} ${research[c].score === null ? "insufficient" : `${research[c].score!.toFixed(2)}×`}`).join(", ");
+  return codes.map((c) => `${c} ${research[c].evidenceGap ? "gap" : `${research[c].nearby.counts.localOrigin + research[c].nearby.counts.international + research[c].nearby.counts.originUnknown} distinctive`}`).join(", ");
+}
+
+/** The filmmaker's selection order; Territory-suggested reserves rank after the whole list, in suggestion order. */
+function priorityOf(input: AgentInput, code: string, researchOrder: number): number {
+  const i = input.targetMarkets.indexOf(code);
+  return i >= 0 ? i : input.targetMarkets.length + researchOrder;
 }
 
 function countBy(claims: Claim[]) {

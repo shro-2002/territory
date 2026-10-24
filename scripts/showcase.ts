@@ -13,7 +13,7 @@ import { SHOWCASE_INPUT } from "../src/lib/territory/scenarios";
 function print(label: string, s: Session) {
   const out = process.stdout;
   out.write(`\n== ${label} (v${s.version}, ${s.status}) ==\n`);
-  for (const m of s.plan.markets) out.write(`  ${m.code.padEnd(3)} ${m.mode.padEnd(9)} signal ${m.score.toFixed(2)}\n`);
+  for (const m of s.plan.markets) out.write(`  ${m.code.padEnd(3)} ${m.mode.padEnd(9)} priority #${m.priority + 1}\n`);
   out.write(`  spend $${s.plan.totalCostUsd.toLocaleString("en-US")} of $${s.input.constraints.budgetUsd.toLocaleString("en-US")}; violations: ${s.violations.length}\n`);
   const rev = s.revisions.at(-1);
   if (rev && rev.version === s.version) out.write(`  invalidated: ${rev.invalidated.join("; ") || "none"}\n  new research: ${rev.newlyResearched.join(", ") || "none"}\n  changes: ${rev.changes.map((c) => `[${c.driver}] ${c.text}`).join("; ")}\n  decisions: ${rev.decisions.map((d) => `${d.action}: ${d.reason}`).join(" | ")}\n`);

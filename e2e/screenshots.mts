@@ -32,7 +32,7 @@ for (const v of VIEWPORTS) {
   await page.getByText("Independent check passed —").waitFor();
   await page.waitForTimeout(1500);
   await span(page, "section[aria-labelledby=strategy-title]", "section[aria-labelledby=budget-title]", `${OUT}/B-strategy-budget-${v.name}.png`);
-  await page.getByRole("button", { name: "Germany 0.96×" }).click().catch(() => page.locator("[aria-label='Researched markets'] button").nth(1).click());
+  await page.getByRole("button", { name: "Germany", exact: true }).click().catch(() => page.locator("[aria-label='Researched markets'] button").nth(1).click());
   await page.waitForTimeout(600);
   await page.locator("section[aria-labelledby=atlas-title]").screenshot({ path: `${OUT}/C-atlas-${v.name}.png` });
   await page.getByRole("button", { name: /distributor pulls out/ }).first().click();

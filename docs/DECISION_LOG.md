@@ -20,3 +20,4 @@
 | 2026-10-23 | Sessions HMAC-sealed, stateless API | Serverless without a DB; replans only run on server-produced evidence |
 | 2026-10-23 | Cache stores slimmed bodies only (586 MB → 5 MB) | Data minimisation; deployable private seed |
 | 2026-10-23 | Treat 2018+ as a hard API limit for movies | Explicit ≤2017 + location → 0 results; TV unaffected |
+| 2026-10-24 | **Retire taste portability; stop ranking countries with Qloo.** Planner uses the filmmaker's priority order, costs and constraints only; Qloo evidence becomes catalogue-vs-distinctive associations under four genre controls | Cached audit: 42–80% of the score's overlap was country catalogue; ranking reordered once catalogue removed (Spearman −0.08–0.66); Spanish film scored <1× in Spain and Mexico |

@@ -1,9 +1,12 @@
 import { z } from "zod";
 
 /**
- * Deterministic strategy construction. No LLM touches this arithmetic.
- * Chooses which markets to prioritise and how to localise each language
- * (subtitle vs dub) under a hard budget, maximising evidence-weighted value.
+ * Deterministic localization planning. No LLM and no cultural score touch this arithmetic.
+ * Takes the filmmaker's candidate markets in their stated priority order and decides which fit and how to
+ * localise each language (subtitle vs dub) under a hard budget and market cap. Qloo evidence never enters:
+ * the taste-portability score was retired after a catalogue audit (docs/EVALUATION.md).
+ * Preference, in order: keep the filmmaker's higher-priority markets, cover more of the list,
+ * dub where the budget allows (stated reach assumption), spend less.
  */
 
 export const LocalizationMode = z.enum(["original", "subtitle", "dub"]);
@@ -35,8 +38,8 @@ export interface CandidateMarket {
   code: string;
   name: string;
   language: string;
-  /** Anchor-calibrated signal in [0,1]; null = insufficient evidence (never selected). */
-  score: number | null;
+  /** 0 = the filmmaker's first choice. Territory-suggested reserves come after the filmmaker's list. */
+  priority: number;
 }
 
 export interface MarketDecision {
@@ -44,15 +47,16 @@ export interface MarketDecision {
   name: string;
   language: string;
   mode: LocalizationMode;
-  score: number;
-  value: number;
+  priority: number;
+  /** MODE_REACH of the chosen mode: a stated assumption, not an audience estimate. */
+  reach: number;
 }
 
 export interface Plan {
   markets: MarketDecision[];
   languages: Array<{ language: string; mode: LocalizationMode; costUsd: number }>;
   totalCostUsd: number;
-  totalValue: number;
+  totalReach: number;
   excluded: Array<{ code: string; reason: string }>;
 }
 
@@ -74,13 +78,13 @@ export function buildPlan({ candidates, constraints, costs, originalLanguage }: 
   for (const c of candidates) {
     if (constraints.excludedMarkets.includes(c.code)) excluded.push({ code: c.code, reason: "market excluded by user" });
     else if (constraints.excludedLanguages.includes(c.language) && c.language !== originalLanguage) excluded.push({ code: c.code, reason: `language ${c.language} excluded by user` });
-    else if (c.score === null) excluded.push({ code: c.code, reason: "insufficient Qloo evidence" });
     else if (c.language !== originalLanguage && !costs[c.language]) excluded.push({ code: c.code, reason: `no cost assumption for ${c.language}` });
     else eligible.push(c);
   }
   // ponytail: exhaustive search, fine for <=14 candidates x <=8 markets; switch to ILP if candidate lists grow.
-  const pool = [...eligible].sort((a, b) => b.score! - a.score!).slice(0, MAX_CANDIDATES);
-  for (const c of eligible.slice(MAX_CANDIDATES)) excluded.push({ code: c.code, reason: "outside top candidates" });
+  const byPriority = [...eligible].sort((a, b) => a.priority - b.priority);
+  const pool = byPriority.slice(0, MAX_CANDIDATES);
+  for (const c of byPriority.slice(MAX_CANDIDATES)) excluded.push({ code: c.code, reason: "beyond the candidates the planner considers" });
 
   let best: Plan | null = null;
   for (const subset of subsetsUpTo(pool, constraints.maxMarkets)) {
@@ -101,25 +105,29 @@ function bestModesFor(subset: CandidateMarket[], constraints: Constraints, costs
     const modeOf = new Map(languages.map((l) => [l.language, l.mode]));
     const markets = subset.map((m) => {
       const mode: LocalizationMode = m.language === originalLanguage ? "original" : modeOf.get(m.language)!;
-      return { code: m.code, name: m.name, language: m.language, mode, score: m.score!, value: round(m.score! * MODE_REACH[mode]) };
+      return { code: m.code, name: m.name, language: m.language, mode, priority: m.priority, reach: MODE_REACH[mode] };
     });
-    const plan = { markets, languages, totalCostUsd, totalValue: round(markets.reduce((s, m) => s + m.value, 0)), excluded: [] };
+    const plan = { markets, languages, totalCostUsd, totalReach: round(markets.reduce((s, m) => s + m.reach, 0)), excluded: [] };
     if (!best || better(plan, best)) best = plan;
   }
   return best;
 }
 
-// Higher value wins; ties go to the cheaper plan, then fewer markets, then alphabetical codes (determinism).
+// Priority first (a higher-priority market is never given up for lower ones; a longer list with the same
+// head wins), then more reach (dub over subtitle), then the cheaper plan, then codes for determinism.
 function better(a: Plan, b: Plan): boolean {
-  if (a.totalValue !== b.totalValue) return a.totalValue > b.totalValue;
+  const pa = a.markets.map((m) => m.priority).sort((x, y) => x - y);
+  const pb = b.markets.map((m) => m.priority).sort((x, y) => x - y);
+  for (let i = 0; i < Math.min(pa.length, pb.length); i++) if (pa[i] !== pb[i]) return pa[i] < pb[i];
+  if (pa.length !== pb.length) return pa.length > pb.length;
+  if (a.totalReach !== b.totalReach) return a.totalReach > b.totalReach;
   if (a.totalCostUsd !== b.totalCostUsd) return a.totalCostUsd < b.totalCostUsd;
-  if (a.markets.length !== b.markets.length) return a.markets.length < b.markets.length;
   return key(a) < key(b);
 }
 
 const key = (p: Plan) => p.markets.map((m) => m.code).sort().join(",");
 const round = (x: number) => Math.round(x * 1e6) / 1e6;
-const emptyPlan = (): Plan => ({ markets: [], languages: [], totalCostUsd: 0, totalValue: 0, excluded: [] });
+const emptyPlan = (): Plan => ({ markets: [], languages: [], totalCostUsd: 0, totalReach: 0, excluded: [] });
 
 function* subsetsUpTo<T>(items: T[], k: number): Generator<T[]> {
   const n = items.length;

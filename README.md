@@ -1,38 +1,44 @@
-# Territory — distribution war room for independent film
+# Territory — cultural research and localization planning for independent film
 
-Territory helps an independent filmmaker or small distributor decide **where an unreleased film should be sold first and
-how to localize it under a fixed budget** — then re-plans when a market falls through or the budget is cut, showing which
-evidence still holds, what was invalidated, what new research was needed and why the decision changed.
+Territory helps an independent filmmaker or small distributor **research the countries they are considering for an unreleased
+film and plan localization under a fixed budget**. Qloo shows what is culturally associated with the film's comparable titles
+in each country, and Territory separates the country's general catalogue from associations distinctive to those comps. A
+deterministic planner fits the filmmaker's own market priorities to the budget, and re-plans when a market falls through or
+the budget is cut.
 
 Built for the Qloo Agentic Hackathon 2026. Cultural evidence comes from the Qloo Taste AI™ hackathon API.
 
 **Live demo:** https://territory-qloo.netlify.app (no login) · **Source:** https://github.com/shro-2002/territory · **Judge walkthrough:** [docs/JUDGE_DEMO.md](docs/JUDGE_DEMO.md)
 
 ## What it does
-1. **Brief** — title, synopsis, original language, 3–6 comparable titles, candidate markets, budget.
-2. **Cultural investigation** — resolves comps in Qloo, builds the comps' taste neighbourhood, re-queries it conditioned on each
-   market, and normalizes by four reference genres in that market ("taste portability"). Thin evidence triggers a fallback;
-   insufficient markets are shown as such and never planned.
-3. **Strategy** — a deterministic optimizer chooses markets and subtitle/dub per language under budget and market cap; an
-   independent validator re-checks every plan.
+1. **Brief** — title, synopsis, original language, 3–6 comparable titles, candidate markets **in your priority order**, budget.
+2. **Cultural investigation** — resolves comps in Qloo, then for each candidate country asks which titles Qloo associates with
+   the comps there and checks them against the same country's associations for four unrelated reference genres. Titles that
+   also come back for those genres are the country's **general catalogue**. The rest are **distinctive under the tested
+   controls**, with **verified local production origin** only when Qloo records it. Thin evidence triggers a fallback; gaps are
+   shown as missing evidence, not as rejections.
+3. **Localization plan** — a deterministic optimizer takes your candidates in priority order and chooses subtitle or dub per
+   language under budget and market cap; an independent validator re-checks every plan. **Qloo evidence never enters the
+   optimizer.**
 4. **War Room** — remove a market, cut the budget, cap markets, require subtitles, exclude a language. The agent analyses the
-   impact, reuses valid evidence, researches same-language or zero-cost reserves only when needed, re-plans, re-verifies, and
-   tags every change as driven by **Qloo evidence**, **cost** or **your constraint**.
-5. **Evidence Lab + export** — provenance-tagged claim ledger, every Qloo request (live vs cache), validation results, and a
-   Markdown distribution research brief.
+   impact, reuses valid evidence, promotes the next candidate on your list, researches suggested reserves only when your list
+   runs out, re-plans, re-verifies, and tags every change as driven by **your priority**, **cost** or **your constraint**.
+5. **Evidence Lab + export** — provenance-tagged claim ledger, every Qloo request (live vs cache), questions to investigate next,
+   and a Markdown research brief.
 
-## What the numbers mean — and don't
-Taste portability = share of the comps' 100 closest Qloo titles that remain in the top 100 when Qloo conditions on a market,
-divided by the same share for reference genres there. It measures **relative cultural overlap**. It is **not** a box-office,
-audience-size, revenue or demand forecast and has not been validated against release outcomes. Location-conditioned Qloo movie
-data covers 2018+ releases. See [docs/EVALUATION.md](docs/EVALUATION.md).
+## What the evidence means — and doesn't
+Qloo associations are titles related to the comps in a country. Territory reports how many are general catalogue (56–93% in
+live data) and lists the rest as candidates for a human to check. They are **not** audience preferences, demand, box-office or
+buyer-interest evidence, and they do not choose markets. An earlier taste-portability score that ranked countries was
+**retired** after a cached-data audit showed it mostly measured each country's catalogue (see
+[docs/EVALUATION.md](docs/EVALUATION.md#catalogue-audit-npm-run-audit-catalogue-cached-data-0-new-calls-2026-10-24)).
+Location-conditioned Qloo movie data covers 2018+ releases.
 
-## Evidence that Qloo is necessary
-In a controlled ablation (same planner, costs, constraints, validator; only Qloo evidence removed) the Qloo-disabled condition
-recommends the **same plan for every film**. With Qloo, plans and post-shock replacements depend on the film, every market claim
-cites Qloo requests, and a brief with non-existent comps is declined rather than planned. An LLM-only baseline (local qwen3:14b)
-produced valid-looking plans but wrong cost totals in 9/12 and a confident plan for fictional comps. Details and limits:
-[docs/EVALUATION.md](docs/EVALUATION.md).
+## What depends on Qloo
+Market selection does **not**: `tests/retired-score.test.ts` scrambles every Qloo-derived field and requires an identical plan.
+The cultural research does: which titles are associated with your comps in each country, which of them are catalogue, which
+survive four genre controls, and which have a recorded local origin. None of that exists without Qloo, and an LLM-only baseline
+named local comparables for films that do not exist (details: [docs/EVALUATION.md](docs/EVALUATION.md)).
 
 ## Run locally
 Requires Node 24+ (tested on 26.12.1).
@@ -41,9 +47,9 @@ npm install
 cp .env.example .env.local      # add QLOO_API_KEY (server-side only); leave empty for labelled mock data
 npm run dev                     # http://localhost:3000
 ```
-Checks: `npm test` (87 unit/integration) · `npx tsx e2e/local-comps-check.mts` (cached real data, needs the private cache) · `npm run e2e` (Playwright, mock backend) · `npm run typecheck` · `npm run lint` · `npm run build`.
+Checks: `npm test` (94 unit/integration) · `npx tsx e2e/local-comps-check.mts` (cached real data, needs the private cache) · `npm run e2e` (Playwright, mock backend) · `npm run typecheck` · `npm run lint` · `npm run build`.
 Local runs ignore any Upstash credentials unless `TERRITORY_REDIS_NAMESPACE` names an isolated keyspace, so tests and dev servers can never spend a deployment's shared quota (see `docs/DEPLOY.md`).
-Experiments (need a key): `npm run experiments` (E1–E5) · `npm run year-window` · `npm run ablation` · `npm run audit-scoring` ·
+Experiments (need a key): `npm run experiments` (E1–E5, retired metric) · `npm run year-window` · `npm run audit-catalogue` (cache only) ·
 `npm run e6` (also needs local Ollama with `qwen3:14b`).
 
 ## Data handling

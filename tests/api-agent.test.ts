@@ -59,7 +59,7 @@ describe("POST /api/agent", () => {
     if (result?.type !== "result") throw new Error("run failed");
     const forged = structuredClone(result.session);
     const first = Object.values(forged.research)[0];
-    first.score = 99;
+    first.titlesFound = 99;
     const res = await post({ action: "replan", session: forged, token: result.token, context: result.context, patch: { budgetUsd: 1000 } }, "203.0.113.11");
     expect(res.status).toBe(400);
     const badContext = `${result.context!.slice(0, -4)}AAAA`;

@@ -12,8 +12,7 @@ import { MARKETS } from "@/lib/territory/markets";
 
 const WIDTH = 960;
 const HEIGHT = 480;
-const LIFT_FLOOR = 0.4;
-const LIFT_SPAN = 1;
+const RESEARCHED_OPACITY = 0.3;
 
 export type AtlasStatus = "plan" | "scored" | "insufficient" | "excluded" | "candidate" | "none";
 
@@ -31,13 +30,12 @@ export interface AtlasProps {
 export const STATUS_LABEL: Record<AtlasStatus, string> = {
   plan: "Selected",
   scored: "Researched",
-  insufficient: "Insufficient evidence",
+  insufficient: "Research gap",
   excluded: "Excluded",
   candidate: "Awaiting research",
   none: "Not a candidate",
 };
 
-const lift = (score: number) => Math.max(0, Math.min(1, (score - LIFT_FLOOR) / LIFT_SPAN));
 
 export function Atlas({ research, planCodes, candidateCodes, excludedCodes, selected, onSelect, pending = [] }: AtlasProps) {
   const tilt = useRef<HTMLDivElement>(null);
@@ -59,7 +57,7 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
     if (excludedCodes.includes(code)) return "excluded";
     if (planCodes.includes(code)) return "plan";
     const r = research[code];
-    if (r) return r.score === null ? "insufficient" : "scored";
+    if (r) return r.evidenceGap ? "insufficient" : "scored";
     return candidateCodes.includes(code) ? "candidate" : "none";
   };
 
@@ -105,11 +103,10 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
             const m = byIso.get(p.id);
             if (!m) return <path key={p.key} d={p.d} fill="var(--map-land)" stroke="var(--map-land-line)" strokeWidth={0.5} />;
             const st = status(m.code);
-            const r = research[m.code];
             const fill =
               st === "plan" ? "url(#planFill)" : st === "excluded" ? "url(#hatch)" : st === "insufficient" ? "var(--map-insufficient)" : st === "scored" ? "var(--evidence)" : st === "candidate" ? "var(--map-candidate)" : "var(--map-land)";
-            // Researched markets share one hue; opacity carries the overlap ratio.
-            const fillOpacity = st === "scored" && r?.score != null ? 0.12 + lift(r.score) * 0.38 : 1;
+            // Researched markets share one hue and one opacity: no Qloo measure ranks one country over another.
+            const fillOpacity = st === "scored" ? RESEARCHED_OPACITY : 1;
             const clickable = st !== "none";
             const isSelected = selected === m.code;
             return (
@@ -130,7 +127,7 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
                 onClick={clickable ? () => onSelect(m.code) : undefined}
                 onKeyDown={clickable ? keySelect(m.code) : undefined}
               >
-                <title>{`${m.name} — ${STATUS_LABEL[st]}${r?.score != null ? ` · ${r.score.toFixed(2)}×` : ""}`}</title>
+                <title>{`${m.name} — ${STATUS_LABEL[st]}`}</title>
               </path>
             );
           })}
@@ -145,16 +142,16 @@ export function Atlas({ research, planCodes, candidateCodes, excludedCodes, sele
               </g>
             );
           })}
-          {Object.keys(research).filter((c) => !planCodes.includes(c) && points[c] && (selected === c || research[c].score !== null)).map((code) => {
+          {Object.keys(research).filter((c) => !planCodes.includes(c) && points[c] && (selected === c || !research[c].evidenceGap)).map((code) => {
             const pt = points[code];
-            return <circle key={code} cx={pt![0]} cy={pt![1]} r={selected === code ? 4.5 : 3} fill={research[code].score === null ? "var(--caution)" : "var(--evidence)"} stroke="var(--ink)" strokeWidth={1} className="pointer-events-none" />;
+            return <circle key={code} cx={pt![0]} cy={pt![1]} r={selected === code ? 4.5 : 3} fill={research[code].evidenceGap ? "var(--caution)" : "var(--evidence)"} stroke="var(--ink)" strokeWidth={1} className="pointer-events-none" />;
           })}
         </svg>
       </div>
       <figcaption className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-bone-dim">
         <Legend swatch={<span className="h-3 w-3 rounded-sm" style={{ background: "linear-gradient(135deg, var(--map-selected-from), var(--map-selected-to))" }} />} label="Selected" />
         <Legend swatch={<span className="h-3 w-3 rounded-sm bg-evidence/40 ring-1 ring-evidence/60" />} label="Researched" />
-        <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-caution" style={{ background: "var(--map-insufficient)" }} />} label="Insufficient evidence" />
+        <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-caution" style={{ background: "var(--map-insufficient)" }} />} label="Research gap" />
         <Legend swatch={<span className="h-3 w-3 rounded-sm ring-1 ring-removed" style={{ background: "repeating-linear-gradient(45deg, var(--removed) 0 2px, var(--map-excluded) 2px 5px)" }} />} label="Excluded" />
         <span className="text-bone-faint">Brighter cyan = more of your comps&apos; taste carries over</span>
       </figcaption>

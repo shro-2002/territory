@@ -8,14 +8,15 @@ const costs: Record<string, LanguageCost> = {
   German: { subtitleUsd: 3000, dubUsd: 30000 },
   Japanese: { subtitleUsd: 4000, dubUsd: 35000 },
 };
+// Priority = the filmmaker's selection order. BR has no Portuguese cost entered.
 const candidates: CandidateMarket[] = [
-  { code: "US", name: "United States", language: "English", score: 0.55 },
-  { code: "MX", name: "Mexico", language: "Spanish", score: 0.8 },
-  { code: "ES", name: "Spain", language: "Spanish", score: 0.7 },
-  { code: "FR", name: "France", language: "French", score: 0.75 },
-  { code: "DE", name: "Germany", language: "German", score: 0.9 },
-  { code: "JP", name: "Japan", language: "Japanese", score: 0.6 },
-  { code: "BR", name: "Brazil", language: "Portuguese", score: null },
+  { code: "US", name: "United States", language: "English", priority: 0 },
+  { code: "MX", name: "Mexico", language: "Spanish", priority: 1 },
+  { code: "ES", name: "Spain", language: "Spanish", priority: 2 },
+  { code: "FR", name: "France", language: "French", priority: 3 },
+  { code: "DE", name: "Germany", language: "German", priority: 4 },
+  { code: "JP", name: "Japan", language: "Japanese", priority: 5 },
+  { code: "BR", name: "Brazil", language: "Portuguese", priority: 6 },
 ];
 const base = (c: Partial<Constraints> = {}) => ConstraintsSchema.parse({ budgetUsd: 60000, maxMarkets: 4, ...c });
 const plan = (c: Partial<Constraints> = {}) => buildPlan({ candidates, constraints: base(c), costs, originalLanguage: "English" });
@@ -31,9 +32,25 @@ describe("buildPlan", () => {
     }
   });
 
-  it("never selects a market with insufficient evidence", () => {
+  it("never selects a market whose language has no cost assumption", () => {
     expect(plan({ budgetUsd: 1e6, maxMarkets: 8 }).markets.map((m) => m.code)).not.toContain("BR");
-    expect(plan().excluded).toContainEqual({ code: "BR", reason: "insufficient Qloo evidence" });
+    expect(plan().excluded).toContainEqual({ code: "BR", reason: "no cost assumption for Portuguese" });
+  });
+
+  it("follows the filmmaker's priority order: the first markets that fit are kept", () => {
+    expect(plan({ budgetUsd: 1e6, maxMarkets: 4 }).markets.map((m) => m.code).sort()).toEqual(["ES", "FR", "MX", "US"]);
+  });
+
+  it("never gives up a higher-priority market to fit more lower-priority ones", () => {
+    // Japanese subtitles (4000) fit only if JP is first; covering it beats three cheaper later markets.
+    const jpFirst = candidates.map((c) => (c.code === "JP" ? { ...c, priority: -1 } : c));
+    const p = buildPlan({ candidates: jpFirst, constraints: base({ budgetUsd: 7000, maxMarkets: 4 }), costs, originalLanguage: "English" });
+    expect(p.markets.map((m) => m.code)).toContain("JP");
+  });
+
+  it("prefers dubbing over subtitles only when the same markets are covered and the budget allows", () => {
+    const p = plan({ budgetUsd: 1e6, maxMarkets: 3 });
+    expect(p.languages.every((l) => l.mode === "dub")).toBe(true);
   });
 
   it("shares one language cost across markets that speak it", () => {
@@ -52,11 +69,12 @@ describe("buildPlan", () => {
   });
 
   it("downgrades dub to subtitles when budget is cut by 40%", () => {
-    const rich = plan({ budgetUsd: 100000 });
-    const cut = plan({ budgetUsd: 60000 });
+    const rich = plan({ budgetUsd: 60000 });
+    const cut = plan({ budgetUsd: 36000 });
     const dubs = (p: typeof rich) => p.languages.filter((l) => l.mode === "dub").length;
     expect(dubs(cut)).toBeLessThan(dubs(rich));
-    expect(cut.totalCostUsd).toBeLessThanOrEqual(60000);
+    expect(cut.totalCostUsd).toBeLessThanOrEqual(36000);
+    expect(cut.markets.map((m) => m.code)).toEqual(rich.markets.map((m) => m.code));
   });
 
   it("is deterministic", () => {

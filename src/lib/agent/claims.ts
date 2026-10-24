@@ -1,5 +1,4 @@
 import type { CallRecord } from "../qloo/types";
-import { NEIGHBOURHOOD_SIZE } from "../territory/market-signal";
 import { marketByCode } from "../territory/markets";
 import { catalogueSentence, internationalSentence, localOriginSentence } from "../territory/nearby-titles";
 import type { LocalizationMode, Plan } from "../territory/planner";
@@ -42,21 +41,20 @@ export function claimsFor({ input, comps, research, plan, calls, modeReach }: Cl
   for (const r of Object.values(research)) {
     const name = marketByCode(r.code).name;
     const ids = r.callIds;
-    if (r.score === null) add(`${name}: insufficient evidence — ${r.insufficientReason}.`, "insufficient", ids);
-    else {
-      add(`${name}: ${r.overlap} of the comps' ${NEIGHBOURHOOD_SIZE} closest titles stay in their top ${NEIGHBOURHOOD_SIZE} when Qloo conditions on ${name}; that is ${r.score.toFixed(2)}× the average of reference genres there${r.fallback ? " (after adding substitute comps)" : ""}. Relative taste alignment, not audience size.`, "qloo", ids);
-      const n = r.nearby;
-      if (n.controlsTested) {
-        add(`${name}: ${catalogueSentence(n, name)}`, "qloo", ids);
-        add(`${name}: ${localOriginSentence(n, name)}`, n.counts.localOrigin ? "qloo" : "insufficient", ids);
-        if (n.counts.international) add(`${name}: ${internationalSentence(n)}`, "qloo", ids);
-      }
+    if (r.evidenceGap) {
+      add(`${name}: research gap — ${r.evidenceGap}. This is missing evidence, not a reason to drop the market.`, "insufficient", ids);
+      continue;
     }
+    const n = r.nearby;
+    add(`${name}: ${catalogueSentence(n, name)}${r.fallback ? " (after adding substitute comps)" : ""}`, "qloo", ids);
+    add(`${name}: ${localOriginSentence(n, name)}`, n.counts.localOrigin ? "qloo" : "insufficient", ids);
+    if (n.counts.international) add(`${name}: ${internationalSentence(n)}`, "qloo", ids);
   }
+  if (plan.markets.length) add(`Markets were chosen from your candidate list in your priority order, within the budget and cap. Qloo evidence did not rank or select them.`, "user");
   for (const l of plan.languages) add(`${l.language} ${l.mode} costs $${l.costUsd.toLocaleString("en-US")} (user cost assumption).`, "user");
   add(`Budget $${input.constraints.budgetUsd.toLocaleString("en-US")}, at most ${input.constraints.maxMarkets} markets${input.constraints.subtitleFirst ? ", subtitle-first" : ""}.`, "user");
   if (plan.languages.length) add(`Subtitles are assumed to reach ${Math.round(modeReach.subtitle * 100)}% of the value of a dub. This weighting is a model assumption, not measured.`, "hypothesis");
-  add("No claim here estimates box office, viewers or revenue: Qloo affinity measures relative taste, not demand.", "insufficient");
+  add("No claim here estimates box office, viewers, revenue or audience preference: Qloo associations are related titles, not demand.", "insufficient");
   return claims;
 }
 

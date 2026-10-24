@@ -8,8 +8,8 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 const displaySerif = Instrument_Serif({ variable: "--font-display-serif", subsets: ["latin"], weight: "400", style: ["normal", "italic"] });
 
 export const metadata: Metadata = {
-  title: "Territory — find your film's world audience",
-  description: "Qloo-grounded market strategy for independent film: which markets to investigate first, which localization to fund, and how the plan changes when reality does.",
+  title: "Territory — cultural research and localization planning for film",
+  description: "Qloo-grounded cultural research for independent film: what Qloo associates with your comps in each candidate country, what is generic and what is distinctive, and how your localization budget and scenarios play out.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

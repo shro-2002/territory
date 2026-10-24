@@ -4,7 +4,7 @@
 src/lib/qloo/      client.ts (GET-only, X-Api-Key server-side, timeout, 429/5xx backoff w/ Retry-After,
                    concurrency cap 4, call budget, sha256 cache key, CallRecord trace)
                    mock.ts (documented contract, "[MOCK]" names) · factory.ts (live iff QLOO_API_KEY; private FileCache in .private/)
-src/lib/territory/ market-signal.ts (taste portability, Spearman, Jaccard) · markets.ts (markets, reference genre sets)
+src/lib/territory/ nearby-titles.ts (catalogue vs distinctive under genre controls) · market-signal.ts (retired taste portability, kept for evaluation scripts; Spearman, Jaccard) · markets.ts (markets, reference genre sets)
                    planner.ts (deterministic optimizer + independent validatePlan)
 src/lib/agent/     agent.ts (state machine, runAgent, replan, diffPlans) · research.ts (neighbourhoods, market research, fallback) · resolve.ts (disambiguation) · claims.ts (ledger)
 scripts/           experiments.ts (E1–E6) · showcase.ts (vertical slice)

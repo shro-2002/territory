@@ -24,7 +24,7 @@ type Props = {
 };
 
 const STEPS = [
-  { n: "01", title: "Investigate", body: "Which markets deserve your attention first." },
+  { n: "01", title: "Investigate", body: "What Qloo associates with your comps in each country — and what is just catalogue." },
   { n: "02", title: "Allocate", body: "Which language work to fund, and what it costs." },
   { n: "03", title: "Challenge", body: "Break the plan and watch it re-plan, with reasons." },
 ] as const;
@@ -49,10 +49,10 @@ export function Hero({ input, source, isBusy, hasResult, progress, pendingCodes,
             Market strategy for independent film, built on Qloo taste data
           </motion.p>
           <motion.h1 className="display mt-6 text-[clamp(2.9rem,7.6vw,6rem)] leading-[0.98]" {...enter(1)}>
-            Find the <em className="text-accent">world</em> your film belongs to.
+            Research the <em className="text-accent">world</em> before your film travels.
           </motion.h1>
           <motion.p className="mt-6 max-w-[34rem] text-base leading-relaxed text-bone-dim sm:text-lg" {...enter(2)}>
-            Territory reads Qloo&apos;s taste graph to tell you which international markets to investigate first and which localization to fund — then re-plans the moment a distributor drops out or the budget shrinks.
+            Territory reads Qloo&apos;s taste graph in each country you are considering, separates generic catalogue from distinctive associations, and fits your localization budget to your priorities — then re-plans the moment a distributor drops out or the budget shrinks.
           </motion.p>
 
           <motion.div className="mt-9 flex flex-wrap items-center gap-3" {...enter(3)}>

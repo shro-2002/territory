@@ -23,7 +23,10 @@ Aggregates: `docs/experiments/results-live.json`. Raw responses: `.private/` onl
    Heatmap needs `output.heatmap.boundary` = `urn:geohash` or `urn:entity:locality` (we sent `city`).
 7. **Blockbuster comps (Titanic, Inception…) overlap 0 in every market** even before the year filter → excluded from baselines.
 
-## Method: taste portability (replaces anchor panel)
+## Method: taste portability (replaces anchor panel, **retired 2026-10-24**)
+
+> Retired after the catalogue audit in EVALUATION.md: most of what it measured was each country's general catalogue. Kept here as the record of what was tested.
+
 
 `N0` = comps' top-100 neighbourhood (no location, 2018+). `Qm` = same query conditioned on market m.
 `portability(m) = |Qm ∩ N0| / 100` — set-based, so per-query normalization is irrelevant.

@@ -70,7 +70,7 @@ function toPlan(p: LlmPlan, input: AgentInput): { plan: Plan; problems: string[]
     }
     const mode: LocalizationMode = market.language === input.originalLanguage ? "original" : m.mode === "original" ? "subtitle" : m.mode;
     if (market.language !== input.originalLanguage && m.mode === "original") problems.push(`${m.code} marked original but its language is ${market.language}`);
-    return [{ code: m.code, name: market.name, language: market.language, mode, score: 0, value: 0 }];
+    return [{ code: m.code, name: market.name, language: market.language, mode, priority: 0, reach: 0 }];
   });
   const languages = new Map<string, LocalizationMode>();
   for (const m of markets) {
@@ -82,7 +82,7 @@ function toPlan(p: LlmPlan, input: AgentInput): { plan: Plan; problems: string[]
   const langs = [...languages].map(([language, mode]) => ({ language, mode, costUsd: input.costs[language] ? (mode === "dub" ? input.costs[language].dubUsd : input.costs[language].subtitleUsd) : NaN }));
   const recomputed = langs.reduce((s, l) => s + l.costUsd, 0);
   if (Math.abs(recomputed - (p.total_cost_usd ?? NaN)) > 1) problems.push(`reported cost ${p.total_cost_usd} vs recomputed ${recomputed}`);
-  return { plan: { markets, languages: langs, totalCostUsd: recomputed, totalValue: 0, excluded: [] }, problems };
+  return { plan: { markets, languages: langs, totalCostUsd: recomputed, totalReach: 0, excluded: [] }, problems };
 }
 
 const QUANT = /(\d[\d,.]*\s*(%|percent|million|billion|k\b|viewers|admissions|box office|\$))|(\$\s?\d)/i;
@@ -119,7 +119,7 @@ function scoreTerritory(s: Session) {
     qlooClaimsWithoutCall: s.claims.filter((c) => c.provenance === "qloo" && c.callIds.length === 0).length,
     byProvenance: Object.fromEntries(["qloo", "user", "hypothesis", "insufficient", "external"].map((k) => [k, s.claims.filter((c) => c.provenance === k).length])),
     quantitativeDemandClaims: s.claims.filter((c) => /viewers|admissions|box office|revenue/i.test(c.text) && !c.text.startsWith("No claim")).length,
-    marketScores: Object.fromEntries(Object.values(s.research).map((r) => [r.code, r.score === null ? null : Math.round(r.score * 1000) / 1000])),
+    researchGaps: Object.values(s.research).filter((r) => r.evidenceGap).map((r) => r.code),
   };
 }
 
@@ -145,7 +145,7 @@ async function main() {
     const lost = t1.plan.markets.find((m) => m.mode !== "original")?.code ?? t1.plan.markets[0]?.code;
     const t2 = lost ? await replan(t1, { excludedMarkets: [lost] }, { client }) : t1;
     const t3 = t1.context ? await replan(t2, { budgetUsd: Math.round(input.constraints.budgetUsd * 0.6) }, { client }) : t2;
-    territoryRank[id] = Object.values(t1.research).filter((r) => r.score !== null).sort((a, b) => b.score! - a.score!).map((r) => r.code);
+    territoryRank[id] = t1.plan.markets.map((m) => m.code);
 
     // LLM-only: same input, then the SAME revisions (removing the market Territory removed, for comparability).
     const msgs = [{ role: "system", content: SYSTEM }, { role: "user", content: `Plan the release.\n${describe(input)}` }];

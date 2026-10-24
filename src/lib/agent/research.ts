@@ -1,6 +1,6 @@
 import type { QlooClient } from "../qloo/client";
 import { QlooError } from "../qloo/types";
-import { computeMarketSignal, MarketSignal, NEIGHBOURHOOD_SIZE, portability } from "../territory/market-signal";
+import { computeMarketSignal, MarketSignal, MIN_REFERENCE_BASELINES, NEIGHBOURHOOD_SIZE, portability } from "../territory/market-signal";
 import { marketByCode, REFERENCE_SETS } from "../territory/markets";
 import { classifyNearby, EMPTY_NEARBY, NearbyTitles } from "../territory/nearby-titles";
 import { resolveComp } from "./resolve";
@@ -28,13 +28,16 @@ export interface ResearchContext {
   references: Array<{ id: string; ids: string[]; globalIds: string[] }>;
 }
 
-export interface MarketResearch extends MarketSignal {
+export interface MarketResearch {
   code: string;
   callIds: string[];
   compIds: string[];
+  /** Titles Qloo returned near the comps in this market (top-K). */
+  titlesFound: number;
   /** Nearby titles split by what the same-market genre controls can support. */
   nearby: NearbyTitles;
-  referencePortabilities: Record<string, number>;
+  /** Why associations here could not be qualified; absent when they could. A research gap, not a rejection. */
+  evidenceGap?: string;
   fallback?: string;
 }
 
@@ -81,31 +84,49 @@ export async function buildContext(client: QlooClient, compIds: string[]): Promi
   return { compIds, global, references };
 }
 
+interface MarketNeighbourhoods {
+  local: Neighbourhood;
+  controls: Array<{ id: string; ids: string[]; globalIds: string[] }>;
+  callIds: string[];
+}
+
+async function marketNeighbourhoods(client: QlooClient, code: string, ctx: ResearchContext): Promise<MarketNeighbourhoods> {
+  const loc = marketByCode(code).locationQuery;
+  const local = await neighbourhood(client, ctx.compIds, loc);
+  const controls: MarketNeighbourhoods["controls"] = [];
+  const callIds = [...local.callIds];
+  for (const ref of ctx.references.filter((r) => r.ids.length && r.globalIds.length)) {
+    const n = await neighbourhood(client, ref.ids, loc);
+    callIds.push(...n.callIds);
+    controls.push({ id: ref.id, ids: n.ids.slice(0, NEIGHBOURHOOD_SIZE), globalIds: ref.globalIds });
+  }
+  return { local, controls, callIds };
+}
+
+/** Qloo associations near the comps in one market, qualified against the same market's genre controls. */
 export async function researchMarket(client: QlooClient, code: string, ctx: ResearchContext): Promise<MarketResearch> {
   const market = marketByCode(code);
   try {
-    const local = await neighbourhood(client, ctx.compIds, market.locationQuery);
-    const referencePortabilities: Record<string, number> = {};
-    const refCalls: string[] = [];
-    const controlIds = new Set<string>();
-    for (const ref of ctx.references.filter((r) => r.ids.length && r.globalIds.length)) {
-      const n = await neighbourhood(client, ref.ids, market.locationQuery);
-      refCalls.push(...n.callIds);
-      for (const id of n.ids.slice(0, NEIGHBOURHOOD_SIZE)) controlIds.add(id);
-      referencePortabilities[ref.id] = portability(ref.globalIds, n.ids).portability;
-    }
-    const signal = computeMarketSignal(ctx.global.ids, local.ids, Object.values(referencePortabilities));
-    return {
-      code, compIds: ctx.compIds, callIds: [...local.callIds, ...refCalls], referencePortabilities, ...signal,
-      nearby: classifyNearby({
-        ids: local.ids.slice(0, NEIGHBOURHOOD_SIZE).filter((id) => !ctx.compIds.includes(id)),
-        names: local.names, origins: local.origins, controlIds, controlsTested: Object.keys(referencePortabilities).length, country: market.name,
-      }),
-    };
+    const { local, controls, callIds } = await marketNeighbourhoods(client, code, ctx);
+    const ids = local.ids.slice(0, NEIGHBOURHOOD_SIZE).filter((id) => !ctx.compIds.includes(id));
+    const base = { code, compIds: ctx.compIds, callIds, titlesFound: ids.length };
+    if (ids.length === 0) return { ...base, nearby: EMPTY_NEARBY, evidenceGap: "Qloo returned no titles near the comps here" };
+    if (controls.length < MIN_REFERENCE_BASELINES) return { ...base, nearby: EMPTY_NEARBY, evidenceGap: `only ${controls.length} genre control(s) available (need ${MIN_REFERENCE_BASELINES}), so associations cannot be qualified` };
+    const controlIds = new Set(controls.flatMap((c) => c.ids));
+    return { ...base, nearby: classifyNearby({ ids, names: local.names, origins: local.origins, controlIds, controlsTested: controls.length, country: market.name }) };
   } catch (err) {
     const reason = err instanceof QlooError ? `${err.code}: ${err.message}` : String(err);
-    return { code, compIds: ctx.compIds, callIds: [], referencePortabilities: {}, nearby: EMPTY_NEARBY, localNeighbourIds: [], score: null, overlap: 0, portability: 0, baselinePortability: null, scoreRange: null, confidence: null, insufficientReason: `query failed (${reason})` };
+    return { code, compIds: ctx.compIds, callIds: [], titlesFound: 0, nearby: EMPTY_NEARBY, evidenceGap: `query failed (${reason})` };
   }
+}
+
+/**
+ * RETIRED taste-portability signal, kept only so the evaluation scripts can reproduce the audit that
+ * invalidated it. Never called by the agent, planner or UI (tests/retired-score.test.ts guards this).
+ */
+export async function retiredPortabilitySignal(client: QlooClient, code: string, ctx: ResearchContext): Promise<MarketSignal> {
+  const { local, controls } = await marketNeighbourhoods(client, code, ctx);
+  return computeMarketSignal(ctx.global.ids, local.ids, controls.map((c) => portability(c.globalIds, c.ids).portability));
 }
 
 /** Thin market evidence → widen the comp set with the comps' closest Qloo titles and retry that market once. */

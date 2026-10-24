@@ -4,25 +4,19 @@ import { LIMITS, replan, runAgent, type Session } from "@/lib/agent/agent";
 import { QlooClient } from "@/lib/qloo/client";
 import { createMockFetch } from "@/lib/qloo/mock";
 import { SHOWCASE_INPUT } from "@/lib/territory/scenarios";
-import { budgetView, compareRows, formatLabel, nextSteps, readingOf, revisionStats, strategyItems, uncertainties } from "@/lib/territory/view-model";
+import { budgetView, compareRows, evidenceLine, evidenceSummary, formatLabel, nextSteps, revisionStats, strategyItems, uncertainties } from "@/lib/territory/view-model";
 
 const client = () => new QlooClient({ apiKey: "mock", source: "mock", fetchImpl: createMockFetch(), sleep: async () => {}, callBudget: LIMITS.maxQlooCalls * 2 });
 
-describe("readingOf", () => {
-  it("states the overlap ratio in plain English without grading the market", () => {
-    const r = readingOf({ score: 1.11, scoreRange: [1.02, 1.2] });
-    expect(r.overlap).toContain("11% more");
-    expect(r.comparison).toBe("above");
-    expect(JSON.stringify(r)).not.toMatch(/strong|weak|promising/i);
+describe("evidenceLine", () => {
+  it("states catalogue and distinctive counts without grading the market", () => {
+    const line = evidenceLine({ gap: null, titlesFound: 100, catalogue: 67, distinctive: 33, localOrigin: 0, originUnknown: 33, controlsTested: 4 });
+    expect(line).toContain("67 of 100");
+    expect(line).toContain("33 are distinctive under 4 genre controls");
+    expect(line).not.toMatch(/strong|weak|promising|fit|demand|×/i);
   });
-  it("reports a range that straddles the baseline as mixed, not as a fit", () => {
-    expect(readingOf({ score: 1.3, scoreRange: [0.9, 1.6] }).comparison).toBe("mixed");
-    expect(readingOf({ score: 0.7, scoreRange: [0.6, 0.8] })).toMatchObject({ comparison: "below" });
-    expect(readingOf({ score: 0.7, scoreRange: [0.6, 0.8] }).overlap).toContain("30% less");
-  });
-  it("uses a ratio for large lifts and says nothing when evidence is missing", () => {
-    expect(readingOf({ score: 2.1, scoreRange: null }).overlap).toContain("2.1× as much");
-    expect(readingOf({ score: null, scoreRange: null }).comparison).toBe("unknown");
+  it("reports a research gap as a gap", () => {
+    expect(evidenceLine(evidenceSummary(undefined))).toMatch(/^Research gap/);
   });
 });
 
@@ -64,8 +58,9 @@ describe("derivations from a real mock-backed session", () => {
   it("strategy items carry plain-English reasons and standing caveats are always listed", () => {
     const items = strategyItems(v1);
     expect(items).toHaveLength(v1.plan.markets.length);
-    for (const i of items) expect(i.reason.length).toBeGreaterThan(20);
-    expect(uncertainties(v1).some((u) => u.includes("relative taste overlap"))).toBe(true);
+    for (const i of items) expect(i.reason).toMatch(/on your candidate list|Suggested by Territory/);
+    expect(uncertainties(v1).some((u) => u.includes("Markets were chosen by your priority order"))).toBe(true);
+    expect(nextSteps(v1).slice(0, Math.min(3, items.length)).every((q) => q.includes("?") || q.includes("Ask"))).toBe(true);
     expect(nextSteps(v1).length).toBeGreaterThanOrEqual(3);
   });
 

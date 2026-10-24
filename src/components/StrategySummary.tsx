@@ -4,8 +4,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useId, useState, type ReactNode } from "react";
 
 import type { Session } from "@/lib/agent/agent";
-import { nextSteps, strategyItems, uncertainties, type BaselineComparison, type StrategyItem } from "@/lib/territory/view-model";
-import { EvidenceMeter } from "./ui/Meter";
+import { evidenceLine, nextSteps, strategyItems, uncertainties, type StrategyItem } from "@/lib/territory/view-model";
 import { SectionHead } from "./ui/SectionHead";
 
 export interface CallStats {
@@ -15,7 +14,6 @@ export interface CallStats {
 
 type Props = { session: Session; stats: CallStats | null; onInspect: (code: string) => void };
 
-const COMPARISON_TONE: Record<BaselineComparison, string> = { above: "var(--evidence)", mixed: "var(--bone-dim)", below: "var(--caution)", unknown: "var(--bone-faint)" };
 
 const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"];
 const ordinal = (n: number) => ORDINALS[n - 1] ?? `#${n}`;
@@ -30,16 +28,16 @@ export function StrategySummary({ session, stats, onInspect }: Props) {
   const c = session.input.constraints;
   const remaining = c.budgetUsd - session.plan.totalCostUsd;
   const lede = items.length ? (
-    <>Investigate <em>{joinNames(items.map((i) => i.name))}</em> first.</>
+    <>Plan for <em>{joinNames(items.map((i) => i.name))}</em>.</>
   ) : (
-    <>No market can be recommended yet.</>
+    <>No candidate market fits yet.</>
   );
   return (
     <section aria-labelledby="strategy-title" className="mx-auto max-w-[1320px] px-4 pt-24 sm:px-8">
       <SectionHead id="strategy" eyebrow={`Strategy, version ${session.version}`} title={<span id="strategy-title">{lede}</span>}>
         {items.length
-          ? `These ${items.length} markets give the most taste overlap with your comparable films that fits your ${c.maxMarkets}-market limit, leaving $${remaining.toLocaleString("en-US")} of the $${c.budgetUsd.toLocaleString("en-US")} localization budget unspent. Overlap says where to investigate first; it does not say a market will buy or watch the film.`
-          : "Evidence is insufficient or your constraints exclude every supported market. Loosen a constraint or try different comparable titles."}
+          ? `Taken from your candidate list in your priority order, these ${items.length} markets fit your ${c.maxMarkets}-market limit and leave $${remaining.toLocaleString("en-US")} of the $${c.budgetUsd.toLocaleString("en-US")} localization budget unspent. Qloo did not rank them: below, it shows what is associated with your comps in each country and what still needs checking.`
+          : "Your budget, market cap or exclusions rule out every candidate market. Loosen a constraint or add candidates."}
       </SectionHead>
 
       {items.length > 0 && (
@@ -61,7 +59,7 @@ export function StrategySummary({ session, stats, onInspect }: Props) {
       </p>
 
       <div className="mt-12 grid gap-4 lg:grid-cols-3">
-        <Panel title="Do next" tone="var(--accent)" defaultOpen>
+        <Panel title="Questions to investigate" tone="var(--accent)" defaultOpen>
           <ul className="space-y-3">{nextSteps(session).map((s) => <li key={s} className="flex gap-3"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent" />{s}</li>)}</ul>
         </Panel>
         <Panel title="What remains uncertain" tone="var(--caution)">
@@ -100,7 +98,7 @@ function QlooPanel({ session, stats }: { session: Session; stats: CallStats | nu
   ];
   return (
     <Panel title="What Qloo contributes" tone="var(--evidence)">
-      <p>Qloo&apos;s taste graph supplies the cultural neighbourhood of your comps in each country. Territory&apos;s planner — deterministic, no AI arithmetic — turns it into a budgeted plan.</p>
+      <p>Qloo surfaces the titles associated with your comps in each country. Territory checks them against four unrelated genres there, separating the country&apos;s general catalogue from distinctive associations to investigate. The budget planner never sees this evidence.</p>
       <dl className="mt-4 divide-y divide-line">
         {rows.map(([k, v]) => (
           <div key={k} className="flex justify-between gap-4 py-2"><dt className="text-bone-dim">{k}</dt><dd className="tabular-nums text-bone">{v}</dd></div>
@@ -112,7 +110,7 @@ function QlooPanel({ session, stats }: { session: Session; stats: CallStats | nu
 
 function MarketCard({ item, rank, onInspect }: { item: StrategyItem; rank: number; onInspect: (code: string) => void }) {
   const reduce = useReducedMotion();
-  const tone = COMPARISON_TONE[item.reading.comparison];
+  const tone = item.evidence.gap ? "var(--caution)" : "var(--evidence)";
   const [open, setOpen] = useState(false);
   const bodyId = useId();
   return (
@@ -123,21 +121,22 @@ function MarketCard({ item, rank, onInspect }: { item: StrategyItem; rank: numbe
       transition={{ duration: 0.7, delay: rank * 0.08, ease: [0.16, 1, 0.3, 1] }}
       className="panel flex flex-col p-6"
     >
-      <p className="eyebrow">Investigate {ordinal(rank)}</p>
+      <p className="eyebrow">{item.priority ? `Your #${item.priority} candidate` : `Suggested reserve · ${ordinal(rank)} in plan`}</p>
       <h3 className="display mt-2 text-4xl leading-none">{item.name}</h3>
       <p className="mt-4 inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: `color-mix(in oklab, ${tone} 50%, transparent)`, color: tone }}>
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone }} />{item.reading.comparisonLabel}
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone }} />{item.evidence.gap ? "Research gap" : `${item.evidence.distinctive} distinctive associations`}
       </p>
       <p className="mt-3 text-sm text-bone md:hidden">{item.formatLabel}</p>
       <div id={bodyId} className={`${open ? "block" : "hidden"} md:block`}>
         <p className="mt-4 text-sm leading-relaxed text-bone-dim">{item.reason}</p>
         <dl className="mt-5 space-y-3 border-t border-line pt-4 text-sm">
           <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Language work</dt><dd className="text-right">{item.formatLabel}</dd></div>
-          <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Confidence</dt><dd><EvidenceMeter strength={item.evidence} /></dd></div>
-          <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Taste overlap vs typical genre</dt><dd className="text-right tabular-nums text-bone-dim">{item.score.toFixed(2)}×{item.scoreRange ? ` (${item.scoreRange[0].toFixed(2)}–${item.scoreRange[1].toFixed(2)})` : ""}</dd></div>
+          <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">General catalogue</dt><dd className="text-right tabular-nums text-bone-dim">{item.evidence.gap ? "—" : `${item.evidence.catalogue} of ${item.evidence.titlesFound}`}</dd></div>
+          <div className="flex items-center justify-between gap-3"><dt className="text-bone-faint">Verified local origin</dt><dd className="text-right tabular-nums text-bone-dim">{item.evidence.gap ? "—" : item.evidence.localOrigin}{item.evidence.originUnknown ? <span className="text-bone-faint"> · {item.evidence.originUnknown} unrecorded</span> : null}</dd></div>
         </dl>
-        {item.localComps.length > 0 && (
-          <p className="mt-4 text-xs leading-relaxed text-bone-faint">Distinctive local-origin titles (vs genre controls): <span className="text-bone-dim">{item.localComps.join(", ")}</span></p>
+        <p className="mt-4 text-xs leading-relaxed text-bone-faint">{evidenceLine(item.evidence)}</p>
+        {item.localOrigin.length > 0 && (
+          <p className="mt-2 text-xs leading-relaxed text-bone-faint">Distinctive local-origin titles (vs genre controls): <span className="text-bone-dim">{item.localOrigin.join(", ")}</span></p>
         )}
         <button type="button" onClick={() => onInspect(item.code)} className="btn mt-5 w-full">Inspect on the atlas</button>
       </div>

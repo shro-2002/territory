@@ -15,7 +15,7 @@ async function brief(page: Page, comps: Array<[string, string]>, markets: string
   }
   const pressed = dialog.getByRole("button", { pressed: true });
   while (await pressed.count()) await pressed.first().click();
-  for (const m of markets) await dialog.getByRole("button", { name: m, exact: true }).click();
+  for (const m of markets) await dialog.getByRole("button", { name: new RegExp(`^${m}(, priority \\d+)?$`) }).click();
   await dialog.getByRole("button", { name: "Run live research" }).click();
 }
 
@@ -26,7 +26,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await brief(page, [["The Quiet Orchard of Vell", "2024"], ["Hollowmere Tides", "2023"], ["Nine Lanterns for Ostra", "2025"]], ["South Korea", "Japan"]);
 await page.getByText(/Research failed for this brief|Research could not run/).first().waitFor({ timeout: 90_000 });
 const cold = await page.locator("main").innerText();
-process.stdout.write(`cold start: failure shown=${cold.includes("Research failed")} · strategy rendered=${cold.includes("Investigate ")} · audit reason=${/could be resolved|no related titles/i.test(await page.locator("#evidence ~ div").innerText())}\n`);
+process.stdout.write(`cold start: failure shown=${cold.includes("Research failed")} · strategy rendered=${cold.includes("Plan for ")} · audit reason=${/could be resolved|no related titles/i.test(await page.locator("#evidence ~ div").innerText())}\n`);
 await page.screenshot({ path: "submission/redesign/edge-cold-start.png", fullPage: false });
 
 // 2. Ambiguous title (Oldboy 2003 vs 2013) with one market → resolution status is surfaced in evidence.

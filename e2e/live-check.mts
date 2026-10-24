@@ -50,7 +50,7 @@ const cards = page.locator("#strategy ~ ol > li");
 check((await cards.count()) === v1.plan.markets.length, "one card per planned market");
 for (const [i, m] of v1.plan.markets.entries()) {
   const card = (await cards.nth(i).innerText()).replace(/\s+/g, " ");
-  check(card.includes(m.name) && card.includes(m.score.toFixed(2)), `card ${i + 1} shows ${m.name} with its ${m.score.toFixed(2)}× ratio in planner order`);
+  check(card.includes(m.name) && !/\d\.\d\d×/.test(card), `card ${i + 1} shows ${m.name} with no taste-portability ratio`);
 }
 const budget = await text(page, "section[aria-labelledby=budget-title]");
 const c = v1.input.constraints;

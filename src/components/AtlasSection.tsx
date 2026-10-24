@@ -14,11 +14,12 @@ type Props = {
 };
 
 export function AtlasSection({ session, selected, pending, onSelect }: Props) {
-  const ranked = Object.values(session.research).sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+  // Your candidate order, then any Territory-suggested reserves; never sorted by a Qloo measure.
+  const markets = Object.values(session.research);
   return (
     <section aria-labelledby="atlas-title" className="mx-auto max-w-[1320px] px-4 pt-32 sm:px-8">
-      <SectionHead id="atlas" eyebrow="Cultural market atlas" title={<span id="atlas-title">Every candidate market, and why.</span>}>
-        Select a country to see why it was chosen, left out, or could not be read — and which nearby titles survive same-country genre controls.
+      <SectionHead id="atlas" eyebrow="Cultural market atlas" title={<span id="atlas-title">Every candidate market, and what Qloo found there.</span>}>
+        Select a country to see what Qloo associates with your comps there: which titles are general catalogue, which are distinctive under four genre controls, and what to investigate next.
       </SectionHead>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)]">
         <div className="panel p-4 sm:p-6">
@@ -32,9 +33,9 @@ export function AtlasSection({ session, selected, pending, onSelect }: Props) {
             pending={pending}
           />
           <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-5" role="group" aria-label="Researched markets">
-            {ranked.map((r) => (
+            {markets.map((r) => (
               <button key={r.code} type="button" className="chip tabular-nums" aria-pressed={selected === r.code} onClick={() => onSelect(r.code)}>
-                {marketByCode(r.code).name} <span className="text-bone-faint">{r.score === null ? "—" : `${r.score.toFixed(2)}×`}</span>
+                {marketByCode(r.code).name}{r.evidenceGap && <span className="text-caution"> · gap</span>}
               </button>
             ))}
           </div>

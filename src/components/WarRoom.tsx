@@ -44,7 +44,7 @@ export function WarRoom({ history, isBusy, isReplanning, progressLine, onReplan 
         {shock && (
           <Scenario
             title={shockTitle}
-            detail={`Remove ${shock.name} from the plan and find the best replacement.`}
+            detail={`Remove ${shock.name} from the plan; the next candidate on your list that fits takes its place.`}
             isActive={activeLabel === shockTitle}
             version={session.version}
             disabled={isBusy}
