@@ -68,7 +68,9 @@ if (showcase.result) {
 const beforeUncached = await counter();
 
 // 3. ONE controlled uncached research: three real films unlikely to be in any cache, one market.
-const uncachedInput = { ...SHOWCASE_INPUT, title: "Controlled uncached test", comps: [{ name: "Perfect Days", year: 2023 }, { name: "The Banshees of Inisherin", year: 2022 }, { name: "Anatomy of a Fall", year: 2023 }], targetMarkets: ["IT"] };
+// UNCACHED_COMPS="Title|year;Title|year;Title|year" and UNCACHED_MARKET=SE let a re-run use films no earlier run cached.
+const envComps = process.env.UNCACHED_COMPS?.split(";").map((c) => { const [name, year] = c.split("|"); return { name, year: Number(year) }; });
+const uncachedInput = { ...SHOWCASE_INPUT, title: "Controlled uncached test", comps: envComps ?? [{ name: "Perfect Days", year: 2023 }, { name: "The Banshees of Inisherin", year: 2022 }, { name: "Anatomy of a Fall", year: 2023 }], targetMarkets: [process.env.UNCACHED_MARKET ?? "IT"] };
 const entriesBeforeUncached = await cacheEntries();
 const uncached = await api({ action: "run", input: uncachedInput });
 const liveCalls = uncached.result?.calls.filter((c) => !c.cacheHit).length ?? -1;
